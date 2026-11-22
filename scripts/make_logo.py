@@ -52,29 +52,10 @@ P.append((GOLD, ring(283, 279.5)))
 for k in range(48):
     a = 2 * math.pi * k / 48; cx, cy = pol(287, a); P.append((GOLD, circle(2.6, cx, cy)))
 
-# ٤) الكلمة
-font_path = '/home/claude/splash/ae_Tholoth.ttf'
-face = hb.Face(hb.Blob.from_file_path(font_path)); hfont = hb.Font(face)
-buf = hb.Buffer(); buf.add_str('مَثَانِي'); buf.guess_segment_properties(); hb.shape(hfont, buf, {})
-tt = TTFont(font_path); gs = tt.getGlyphSet(); order = tt.getGlyphOrder()
-xs = 0; glyphs = []
-for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
-    glyphs.append((order[info.codepoint], xs + pos.x_offset, pos.y_offset)); xs += pos.x_advance
-# حدود الكلمة لتوسيطها
-from fontTools.pens.boundsPen import BoundsPen
-minx = miny = 1e9; maxx = maxy = -1e9
-for g, x, y in glyphs:
-    bp = BoundsPen(gs); gs[g].draw(TransformPen(bp, (1, 0, 0, 1, x, y)))
-    if bp.bounds:
-        minx, miny = min(minx, bp.bounds[0]), min(miny, bp.bounds[1]); maxx, maxy = max(maxx, bp.bounds[2]), max(maxy, bp.bounds[3])
-w, h = maxx - minx, maxy - miny
-s = min(450 / w, 360 / h)
-tx = C - (minx + w / 2) * s; ty = C + (miny + h / 2) * s
-text = []
-for g, x, y in glyphs:
-    sp = SVGPathPen(gs); gs[g].draw(TransformPen(sp, (s, 0, 0, -s, tx + x * s, ty - y * s))); d = sp.getCommands()
-    if d: text.append(d)
-P.append(('#FFF3D6', ' '.join(text)))  # الكلمة بلون عاجي ليظهر على القرص
+# ٤) الكلمة: «مثاني» بخط ثلث (رسمها صاحب التطبيق)، محوّلة إلى مسارات بـ potrace
+import os
+cal = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mathani_calligraphy.txt')).read()
+P.append(('#FFF3D6', cal))  # الكلمة بلون عاجي ليظهر على القرص
 
 def svg(bg=True, size=1000):
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="{size}" height="{size}">']
