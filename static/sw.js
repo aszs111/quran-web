@@ -2,7 +2,7 @@
 const VERSION = '__BUILD__';
 const SHELL = `shell-${VERSION}`, DATA = 'data-v1';
 const SHELL_FILES = ['./', 'index.html', 'app.css', 'app.js', 'manifest.webmanifest', 'fonts/markazi.woff2', 'fonts/bsml.ttf',
-  'data/mushaf.json', 'data/surahs.json', 'data/ayah_counts.json', 'data/line_widths.json', 'data/page_stroke.json'];
+  'data/mushaf.json', 'data/text.json', 'fonts/hafs.woff2', 'data/surahs.json', 'data/ayah_counts.json', 'data/line_widths.json', 'data/page_stroke.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(SHELL_FILES)).then(() => self.skipWaiting()));

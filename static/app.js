@@ -5,10 +5,13 @@
 
 const $ = s => document.querySelector(s);
 const scroller = $('#scroller'), pagesEl = $('#pages');
+const tscroller = $('#tscroller'), tpagesEl = $('#tpages');
+const cur = () => mode === 'text' ? tscroller : scroller;
 const store = {
   get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
+let mode = store.get('mode', 'pages'); // pages | text
 const AR = n => String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d]);
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const pad3 = n => String(n).padStart(3, '0');
@@ -56,6 +59,7 @@ async function boot() {
   goToPos(pos);
   $('#loading').remove();
   onScroll();
+  if (mode === 'text') { mode = 'pages'; await setMode('text'); const tp = store.get('tpos', null); if (tp) goToAyah(tp[0], tp[1]); }
   if (!store.get('hideTips', false)) showTips();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
@@ -98,6 +102,15 @@ function goToPos(pos) {
   scroller.scrollTop = L.tops[i] + f * L.heights[i] - scroller.clientHeight / 2;
 }
 function goToPage(p) { scroller.scrollTop = L.tops[p - 1]; }
+function goToAyah(s, a, center = false) {
+  if (mode !== 'text') { goToPage(D.ayahPage.get(s + ':' + a)); return; }
+  const el = tpagesEl.querySelector(`.ta[data-a="${s}:${a}"]`) || tpagesEl.querySelector(`.tp[data-p="${TX.ayahPage.get(s + ':' + a)}"]`);
+  if (el) el.scrollIntoView({ block: center ? 'center' : 'start' });
+}
+function goToPageAny(p) {
+  if (mode !== 'text') return goToPage(p);
+  const el = tpagesEl.querySelector(`.tp[data-p="${p}"]`); if (el) el.scrollIntoView({ block: 'start' });
+}
 
 // ======================= رسم الصفحات =======================
 const rendered = new Map();
@@ -173,6 +186,7 @@ function lineRef(p, idx) {
 
 let lastHeader = '';
 function updateHeader() {
+  if (mode === 'text') return updateTextHeader();
   const pos = currentPos(), i = Math.floor(pos), p = i + 1;
   const [s, a] = lineRef(p, Math.floor((pos - i) * D.pages[i].length));
   const key = s + '|' + p + '|' + juzOf(s, a);
@@ -201,6 +215,101 @@ addEventListener('resize', () => {
   resizeTimer = setTimeout(() => { if (!D) return; const pos = currentPos(); layout(); goToPos(pos); onScroll(); }, 150);
 });
 
+// ======================= وضع النص (الرسم العثماني بخط حفص من مجمع الملك فهد) =======================
+const TX = { built: false, ayahPage: new Map(), juz: new Map(), size: store.get('tsize', 26) };
+function tsize(v) {
+  TX.size = Math.max(16, Math.min(64, v));
+  tpagesEl.style.setProperty('--tsize', TX.size + 'px');
+  store.set('tsize', TX.size);
+}
+async function buildText() {
+  if (TX.built) return;
+  const pages = await getJSON('data/text.json');
+  const ff = new FontFace('hafs', 'url(fonts/hafs.woff2) format("woff2")', { display: 'block' });
+  await ff.load(); document.fonts.add(ff);
+  let h = '';
+  pages.forEach((ays, pi) => {
+    const p = pi + 1;
+    h += `<section class="tp" data-p="${p}"><p class="tx">`;
+    for (const [s, a, j, t] of ays) {
+      TX.ayahPage.set(s + ':' + a, p); TX.juz.set(s + ':' + a, j);
+      if (a === 1) {
+        h += `</p><div class="tsh"><div class="sh">سورة ${D.surahs[s - 1]}</div></div>`;
+        if (s !== 1 && s !== 9) h += `<div class="tbs">بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</div>`;
+        h += `<p class="tx">`;
+      }
+      const k = t.lastIndexOf('\u00a0');
+      const body = k > 0 ? t.slice(0, k) : t, num = k > 0 ? t.slice(k + 1) : '';
+      const cls = isBm(s, a) ? ' bm' : '';
+      h += `<span class="ta${cls}" data-a="${s}:${a}">${esc(body)}\u00a0<span class="tm" data-a="${s}:${a}">${esc(num)}</span></span> `;
+    }
+    h += `</p><div class="pmark"><span>${AR(p)}</span></div></section>`;
+  });
+  tpagesEl.innerHTML = h.replace(/<p class="tx"><\/p>/g, '');
+  tsize(TX.size);
+  TX.built = true;
+}
+function textAyahAtCenter() {
+  const r = tscroller.getBoundingClientRect();
+  for (const dy of [0, -20, 20, -40, 40, -80, 80]) {
+    const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2 + dy);
+    const ta = el && el.closest && el.closest('.ta');
+    if (ta) return ta;
+  }
+  return null;
+}
+let lastTA = null;
+function updateTextHeader() {
+  const ta = textAyahAtCenter() || lastTA; if (!ta) return;
+  lastTA = ta;
+  const [s, a] = ref(ta); const k = s + ':' + a;
+  const p = TX.ayahPage.get(k), j = TX.juz.get(k);
+  const key = 't' + s + '|' + p + '|' + j; if (key === lastHeader) return; lastHeader = key;
+  $('#hSurah').textContent = D.surahs[s - 1];
+  $('#hPage').textContent = AR(p);
+  $('#hJuz').textContent = 'الجزء ' + JUZ_NAMES[j - 1];
+  store.set('tpos', [s, a]);
+}
+tscroller.addEventListener('scroll', () => { requestAnimationFrame(updateTextHeader); }, { passive: true });
+
+async function setMode(m) {
+  // نحتفظ بموضع القراءة عند التبديل
+  let at;
+  if (mode === 'text') { const ta = textAyahAtCenter(); at = ta ? ref(ta) : store.get('tpos', [1, 1]); }
+  else { const pos = currentPos(), i = Math.floor(pos); at = lineRef(i + 1, Math.floor((pos - i) * D.pages[i].length)); }
+  if (m === 'text') { $('#loading2').hidden = false; await buildText(); $('#loading2').hidden = true; }
+  mode = m; store.set('mode', m);
+  scroller.hidden = m === 'text'; tscroller.hidden = m !== 'text';
+  $('#hMode').classList.toggle('on', m === 'text');
+  lastHeader = '';
+  goToAyah(at[0], at[1]);
+  if (m === 'text') updateTextHeader(); else onScroll();
+}
+$('#hMode').onclick = () => setMode(mode === 'text' ? 'pages' : 'text');
+
+// التكبير والتصغير بإصبعين، مع إبقاء الآية التي في الوسط مكانها
+const pinch = { active: false, d0: 0, s0: 0 };
+const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+tscroller.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) { pinch.active = true; pinch.d0 = dist(e.touches); pinch.s0 = TX.size; clearTimeout(G.timer); }
+}, { passive: true });
+let pinchRaf = 0;
+tscroller.addEventListener('touchmove', e => {
+  if (!pinch.active || e.touches.length !== 2) return;
+  e.preventDefault();
+  const want = pinch.s0 * dist(e.touches) / pinch.d0;
+  cancelAnimationFrame(pinchRaf);
+  pinchRaf = requestAnimationFrame(() => zoomKeepingCenter(want));
+}, { passive: false });
+tscroller.addEventListener('touchend', e => { if (e.touches.length < 2) setTimeout(() => { pinch.active = false; }, 50); });
+tscroller.addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); zoomKeepingCenter(TX.size * (e.deltaY < 0 ? 1.08 : 0.93)); } }, { passive: false });
+function zoomKeepingCenter(v) {
+  const ta = textAyahAtCenter(); const r = tscroller.getBoundingClientRect();
+  const before = ta ? ta.getBoundingClientRect().top - r.top : 0;
+  tsize(Math.round(v));
+  if (ta) tscroller.scrollTop += (ta.getBoundingClientRect().top - r.top) - before;
+}
+
 // ======================= التمرير التلقائي =======================
 const auto = { shown: false, running: false, speed: store.get('speed', 4), acc: 0, last: 0 };
 const autoEl = $('#auto');
@@ -214,8 +323,9 @@ function tick(t) {
   if (auto.last) {
     auto.acc += auto.speed * 6 * (t - auto.last) / 1000;
     const step = Math.floor(auto.acc);
-    if (step >= 1) { scroller.scrollTop += step; auto.acc -= step; }
-    if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1) { auto.running = false; paintAuto(); return; }
+    const sc = cur();
+    if (step >= 1) { sc.scrollTop += step; auto.acc -= step; }
+    if (sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 1) { auto.running = false; paintAuto(); return; }
   }
   auto.last = t;
   requestAnimationFrame(tick);
@@ -235,30 +345,35 @@ autoEl.addEventListener('click', e => {
 paintAuto();
 
 // ======================= اللمس: نقرة، نقرتان، ضغط مطوّل =======================
-const G = { timer: 0, x: 0, y: 0, el: null, long: false, lastTapT: 0, lastTapEl: null, tapTimer: 0 };
-pagesEl.addEventListener('contextmenu', e => e.preventDefault());
-pagesEl.addEventListener('pointerdown', e => {
-  G.el = e.target.closest('.w, .m'); G.x = e.clientX; G.y = e.clientY; G.long = false;
-  clearTimeout(G.timer);
-  if (G.el) G.timer = setTimeout(() => { G.long = true; onLongPress(G.el); }, 480);
-});
-pagesEl.addEventListener('pointermove', e => {
-  if (Math.hypot(e.clientX - G.x, e.clientY - G.y) > 10) { clearTimeout(G.timer); G.el = null; G.moved = true; }
-});
-pagesEl.addEventListener('pointercancel', () => { clearTimeout(G.timer); G.el = null; G.moved = true; });
-pagesEl.addEventListener('pointerup', e => {
-  clearTimeout(G.timer);
-  if (G.long || G.moved) { G.moved = false; return; }
-  const el = e.target.closest('.w, .m');
-  const now = performance.now();
-  if (el && el.classList.contains('w') && G.lastTapEl === el && now - G.lastTapT < 320) {
-    clearTimeout(G.tapTimer); G.lastTapEl = null; onDoubleTap(el); return;
-  }
-  G.lastTapEl = el; G.lastTapT = now;
-  clearTimeout(G.tapTimer);
-  G.tapTimer = setTimeout(onSingleTap, el ? 300 : 0);
-});
-pagesEl.addEventListener('pointerdown', () => { G.moved = false; }, true);
+const G = { timer: 0, x: 0, y: 0, el: null, long: false, lastTapT: 0, lastTapEl: null, tapTimer: 0, tx: 0, ty: 0 };
+const HIT = '.m, .tm, .w, .ta';
+function hitEl(t) { return t.closest('.m, .tm') || t.closest('.w, .ta'); }
+for (const host of [pagesEl, tpagesEl]) {
+  host.addEventListener('contextmenu', e => e.preventDefault());
+  host.addEventListener('pointerdown', e => {
+    G.moved = false;
+    G.el = hitEl(e.target); G.x = e.clientX; G.y = e.clientY; G.long = false;
+    clearTimeout(G.timer);
+    if (G.el) G.timer = setTimeout(() => { G.long = true; onLongPress(G.el); }, 480);
+  });
+  host.addEventListener('pointermove', e => {
+    if (Math.hypot(e.clientX - G.x, e.clientY - G.y) > 10) { clearTimeout(G.timer); G.el = null; G.moved = true; }
+  });
+  host.addEventListener('pointercancel', () => { clearTimeout(G.timer); G.el = null; G.moved = true; });
+  host.addEventListener('pointerup', e => {
+    clearTimeout(G.timer);
+    if (G.long || G.moved || pinch.active) { G.moved = false; return; }
+    const el = hitEl(e.target);
+    const now = performance.now();
+    const isWord = el && (el.classList.contains('w') || el.classList.contains('ta'));
+    if (isWord && G.lastTapEl === el && now - G.lastTapT < 320) {
+      clearTimeout(G.tapTimer); G.lastTapEl = null; onDoubleTap(el, e.clientX, e.clientY); return;
+    }
+    G.lastTapEl = el; G.lastTapT = now;
+    clearTimeout(G.tapTimer);
+    G.tapTimer = setTimeout(onSingleTap, el ? 300 : 0);
+  });
+}
 
 // النقر على الصفحة يشغّل التمرير التلقائي ويوقفه؛ تبقى الأزرار ظاهرة قليلًا بعد الإيقاف لضبط السرعة
 let hideTimer = 0;
@@ -273,18 +388,35 @@ function ref(el) { return el.dataset.a.split(':').map(Number); }
 function onLongPress(el) {
   if (navigator.vibrate) navigator.vibrate(15);
   const [s, a] = ref(el);
-  if (el.classList.contains('m')) return toggleBookmark(s, a);
+  if (el.classList.contains('m') || el.classList.contains('tm')) return toggleBookmark(s, a);
   setSelected([s, a]);
   $('#menuTitle').textContent = `${D.surahs[s - 1]} – الآية ${AR(a)}`;
   $('#menu').hidden = false; $('#veil').hidden = false;
 }
-function onDoubleTap(el) { const [s, a] = ref(el); showWord(s, a, +el.dataset.w, el.textContent); }
+function onDoubleTap(el, x, y) {
+  const [s, a] = ref(el);
+  if (el.classList.contains('w')) return showWord(s, a, +el.dataset.w, el.textContent);
+  // وضع النص: نبحث عن الكلمة التي يقع موضع النقر داخل مستطيلها
+  const tn = el.firstChild; if (!tn || tn.nodeType !== 3) return;
+  const t = tn.textContent, rg = document.createRange();
+  let word = '', wi = 0, n = 0;
+  for (const m of t.matchAll(/\S+/g)) {
+    n++;
+    rg.setStart(tn, m.index); rg.setEnd(tn, m.index + m[0].length);
+    for (const r of rg.getClientRects()) {
+      if (x >= r.left - 2 && x <= r.right + 2 && y >= r.top - 4 && y <= r.bottom + 4) { word = m[0]; wi = n; break; }
+    }
+    if (word) break;
+  }
+  if (!word) return;
+  showWordText(s, a, wi, word);
+}
 
 function forAyah(s, a, fn) { document.querySelectorAll(`[data-a="${s}:${a}"]`).forEach(fn); }
 function setSelected(r) {
   if (selected) forAyah(...selected, e => e.classList.remove('sel'));
   selected = r;
-  if (r && !isBm(...r)) forAyah(...r, e => { if (e.classList.contains('w')) e.classList.add('sel'); });
+  if (r && !isBm(...r)) forAyah(...r, e => { if (e.classList.contains('w') || e.classList.contains('ta')) e.classList.add('sel'); });
 }
 function toggleBookmark(s, a) {
   const same = isBm(s, a);
@@ -400,6 +532,18 @@ async function showWord(s, a, wi, glyphText) {
     <div class="small">${ayahTitle(s, a)} · السراج في بيان غريب القرآن</div>`, true);
 }
 
+async function showWordText(s, a, wi, word) {
+  const list = await json(`data/gharib/${s}.json`);
+  const k = skel(normAr(word));
+  const e = list.find(x => x.a === a && normAr(x.p).split(' ').some(p => skel(p) === k && k)) ||
+            list.find(x => x.a === a && x.w.includes(wi));
+  sheet.style.height = '';
+  openSheet(`
+    <div class="word">﴿${esc(e ? e.p : word)}﴾</div>
+    <div class="body" style="flex:none;margin:8px 0;${e ? '' : 'color:var(--muted)'}">${e ? esc(e.m) : 'لم يذكر كتاب «السراج في بيان غريب القرآن» معنًى لهذه الكلمة.'}</div>
+    <div class="small">${ayahTitle(s, a)} · السراج في بيان غريب القرآن</div>`, true);
+}
+
 // ---------- التلاوة ----------
 const player = $('#player');
 const A = { s: 0, a: 0, start: null, loaded: false, rec: store.get('reciter', 0), rate: store.get('rate', 1), cont: store.get('continuous', false) };
@@ -459,6 +603,7 @@ function showAudio(s, a) {
 const TIPS = [
   'انقر على الصفحة لتشغيل التمرير التلقائي، وانقر مرة أخرى لإيقافه. وزرّا + و − الأحمران لضبط سرعته.',
   'اضغط ضغطة مطوّلة على أي آية لتظهر قائمة فيها: التلاوة بأصوات عدد من القراء، وتفسير السعدي.',
+  'زر «نص» أعلى الشاشة يعرض القرآن نصًّا بخط المصحف يلتف مع الشاشة، وتكبّره وتصغّره بإصبعين.',
   'انقر نقرتين على أي كلمة ليظهر معناها من كتاب «السراج في بيان غريب القرآن» للخضيري.',
   'اضغط ضغطة مطوّلة على رقم الآية لتضع علامة الوقوف، فتتلوّن الآية وتعرف أين انتهيت. والضغطة نفسها تزيلها.',
   'انقر اسم السورة أعلى الشاشة لفهرس السور، وفيه الانتقال إلى علامة الوقوف وإعادة عرض التلميحات، ورقم الصفحة للانتقال إلى صفحة، والجزء لقائمة الأجزاء.',
@@ -561,8 +706,8 @@ $('#hSearch').onclick = () => {
   $('#slist').onclick = e => {
     const b = e.target.closest('.sres'); if (!b) return;
     const s = +b.dataset.s, a = +b.dataset.a, p = +b.dataset.p;
-    closeAll(); goToPage(p);
-    setTimeout(() => { setSelected([s, a]); const el = document.querySelector(`[data-a="${s}:${a}"]`); if (el) el.scrollIntoView({ block: 'center' }); }, 120);
+    closeAll(); goToAyah(s, a, true);
+    setTimeout(() => { setSelected([s, a]); const el = cur().querySelector(`[data-a="${s}:${a}"]`); if (el) el.scrollIntoView({ block: 'center' }); }, 120);
   };
   setTimeout(() => inp.focus(), 50);
 };
@@ -573,17 +718,17 @@ $('#hSurah').onclick = () => {
   openSheet(`<div class="title">فهرس السور</div>
     ${bookmark ? `<button class="bmrow" id="goBm">◆ علامة الوقوف: ${ayahTitle(...bookmark)}</button>` : ''}
     <button class="bmrow" id="showTipsBtn" style="background:#FBF6EC;color:#7A2430">💡 عرض التلميحات</button>
-    <div class="list">${D.surahs.map((n, i) => `<button class="item" data-p="${D.surahPage[i + 1]}"><span class="n">${AR(i + 1)}</span>سورة ${n}<span class="p">ص ${AR(D.surahPage[i + 1])}</span></button>`).join('')}</div>`);
+    <div class="list">${D.surahs.map((n, i) => `<button class="item" data-s="${i + 1}" data-p="${D.surahPage[i + 1]}"><span class="n">${AR(i + 1)}</span>سورة ${n}<span class="p">ص ${AR(D.surahPage[i + 1])}</span></button>`).join('')}</div>`);
   $('#showTipsBtn').onclick = () => { store.set('hideTips', false); closeAll(); showTips(); };
-  if (bookmark) $('#goBm').onclick = () => { const p = D.ayahPage.get(bookmark.join(':')); closeAll(); goToPage(p); };
-  sheet.querySelector('.list').onclick = e => { const b = e.target.closest('.item'); if (b) { closeAll(); goToPage(+b.dataset.p); } };
+  if (bookmark) $('#goBm').onclick = () => { closeAll(); goToAyah(...bookmark, true); };
+  sheet.querySelector('.list').onclick = e => { const b = e.target.closest('.item'); if (b) { closeAll(); goToAyah(+b.dataset.s, 1); } };
 };
 $('#hJuz').onclick = () => {
   sheet.style.height = '85vh';
   const pages = JUZ.map(([s, a]) => D.ayahPage.get(s + ':' + a));
   openSheet(`<div class="title">الأجزاء</div>
-    <div class="list">${pages.map((p, i) => `<button class="item" data-p="${p}">الجزء ${JUZ_NAMES[i]}<span class="p">ص ${AR(p)}</span></button>`).join('')}</div>`);
-  sheet.querySelector('.list').onclick = e => { const b = e.target.closest('.item'); if (b) { closeAll(); goToPage(+b.dataset.p); } };
+    <div class="list">${pages.map((p, i) => `<button class="item" data-j="${i}" data-p="${p}">الجزء ${JUZ_NAMES[i]}<span class="p">ص ${AR(p)}</span></button>`).join('')}</div>`);
+  sheet.querySelector('.list').onclick = e => { const b = e.target.closest('.item'); if (b) { closeAll(); goToAyah(...JUZ[+b.dataset.j]); } };
 };
 $('#hPage').onclick = () => {
   sheet.style.height = '';
@@ -592,7 +737,7 @@ $('#hPage').onclick = () => {
     <div class="row"><button class="tbtn" id="pgGo">انتقال</button><button class="tbtn" id="pgNo">إلغاء</button></div>`, true);
   const go = () => {
     const n = parseInt($('#pgIn').value.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)), 10);
-    if (n >= 1 && n <= 604) { closeAll(); goToPage(n); }
+    if (n >= 1 && n <= 604) { closeAll(); goToPageAny(n); }
   };
   $('#pgGo').onclick = go; $('#pgNo').onclick = closeAll;
   $('#pgIn').onkeydown = e => { if (e.key === 'Enter') go(); };

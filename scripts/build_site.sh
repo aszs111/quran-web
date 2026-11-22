@@ -8,9 +8,14 @@ curl -sfL "https://codeload.github.com/zonetecde/mushaf-layout/tar.gz/$LAYOUT_SH
 seq 1 114 | xargs -P 16 -I{} sh -c '
   curl -sfL --retry 3 -o src/tafsir/saadi/{}.json  https://raw.githubusercontent.com/spa5k/tafsir_api/'$TAFSIR_SHA'/tafsir/ar-tafseer-al-saddi/{}.json'
 test "$(ls src/tafsir/saadi | wc -l)" -eq 114
+HAFS_SHA=281dbbe8eed1370daa5a023b6cd81655cbfd6473
+curl -sfL --retry 3 -o src/hafsData_v18.json https://raw.githubusercontent.com/thetruetruth/quran-data-kfgqpc/$HAFS_SHA/hafs/data/hafsData_v18.json
+curl -sfL --retry 3 -o src/hafs.woff2 https://raw.githubusercontent.com/thetruetruth/quran-data-kfgqpc/$HAFS_SHA/hafs/font/hafs.18.woff2
 python3 scripts/prepare_assets.py src/layout src/tafsir site/data --no-fonts
 cp scripts/line_widths.json site/data/
+python3 scripts/prepare_text.py src/hafsData_v18.json site/data
 cp -r static/. site/
+cp src/hafs.woff2 site/fonts/hafs.woff2
 cp src/layout/fonts/QPC1/p*.woff2 site/fonts/
 cp src/layout/fonts/QPC1/QPC1BSML.ttf site/fonts/bsml.ttf
 # رقم إصدار لملفات الواجهة حتى لا يخلط المتصفح نسخة قديمة بجديدة
