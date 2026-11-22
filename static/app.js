@@ -391,7 +391,6 @@ function onLongPress(el) {
   if (el.classList.contains('m') || el.classList.contains('tm')) return toggleBookmark(s, a);
   setSelected([s, a]);
   $('#menuTitle').textContent = `${D.surahs[s - 1]} – الآية ${AR(a)}`;
-  $('#menu [data-act=copy]').hidden = mode !== 'text'; // النسخ في وضع النص فقط
   $('#menu').hidden = false; $('#veil').hidden = false;
 }
 function onDoubleTap(el, x, y) {
