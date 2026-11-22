@@ -223,10 +223,12 @@ function setRunning(r) { auto.running = r; auto.last = 0; auto.acc = 0; paintAut
 autoEl.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const act = b.dataset.act;
+  clearTimeout(hideTimer);
+  if (!auto.running) hideTimer = setTimeout(() => { if (!auto.running) { auto.shown = false; paintAuto(); } }, 4000);
   if (act === 'faster') auto.speed = Math.min(20, auto.speed + 1);
   if (act === 'slower') auto.speed = Math.max(1, auto.speed - 1);
   if (act === 'toggle') return setRunning(!auto.running);
-  if (act === 'stop') { auto.shown = false; return setRunning(false); }
+  if (act === 'stop') { clearTimeout(hideTimer); auto.shown = false; return setRunning(false); }
   store.set('speed', auto.speed); paintAuto();
 });
 paintAuto();
@@ -257,10 +259,14 @@ pagesEl.addEventListener('pointerup', e => {
 });
 pagesEl.addEventListener('pointerdown', () => { G.moved = false; }, true);
 
+// النقر على الصفحة يشغّل التمرير التلقائي ويوقفه؛ تبقى الأزرار ظاهرة قليلًا بعد الإيقاف لضبط السرعة
+let hideTimer = 0;
 function onSingleTap() {
   if (selected) { setSelected(null); closeAll(); return; }
-  auto.shown = !auto.shown;
-  if (!auto.shown) setRunning(false); else paintAuto();
+  clearTimeout(hideTimer);
+  auto.shown = true;
+  setRunning(!auto.running);
+  if (!auto.running) hideTimer = setTimeout(() => { if (!auto.running) { auto.shown = false; paintAuto(); } }, 4000);
 }
 function ref(el) { return el.dataset.a.split(':').map(Number); }
 function onLongPress(el) {

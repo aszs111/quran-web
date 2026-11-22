@@ -58,6 +58,7 @@ button { font-family: inherit; color: inherit; background: none; border: 0; padd
 #auto button { width: 40px; height: 40px; display: grid; place-items: center; }
 #auto svg { width: 26px; height: 26px; fill: rgba(0,0,0,.38); }
 #auto .big svg { width: 34px; height: 34px; }
+#auto .pm svg { width: 32px; height: 32px; fill: rgba(229,83,83,.85); }  /* + و − بأحمر خفيف واضح */
 #speed { width: 22px; text-align: center; font-size: 19px; color: rgba(0,0,0,.40); }
 
 /* القوائم والنوافذ */
