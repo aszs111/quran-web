@@ -719,6 +719,27 @@ function runSearch(q) {
   }
   return { list: exact.concat(loose), qn, qk };
 }
+// البحث عن صفحة أو جزء: «460» أو «صفحة 460» أو «الجزء 5» أو «الجزء الخامس»
+function specialResults(q) {
+  const t = q.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).trim();
+  const num = (t.match(/\d+/) || [])[0], n = num ? +num : 0;
+  const wantPage = /صفح|^ص\s*\d/.test(t), wantJuz = /جز/.test(t);
+  const out = [];
+  const pageItem = p => {
+    const [s, a] = lineRef(p, 0);
+    return { kind: 'page', n: p, title: `صفحة ${p}`, sub: `سورة ${D.surahs[s - 1]}، تبدأ بالآية ${AR(a)}` };
+  };
+  const juzItem = j => ({ kind: 'juz', n: j, title: `الجزء ${JUZ_NAMES[j - 1]}`, sub: `يبدأ بسورة ${D.surahs[JUZ[j - 1][0] - 1]}، الآية ${AR(JUZ[j - 1][1])}` });
+  if (n) {
+    if (!wantJuz && n >= 1 && n <= 604) out.push(pageItem(n));
+    if (!wantPage && n >= 1 && n <= 30) out.push(juzItem(n));
+  } else if (wantJuz) {
+    // اسم الجزء بالحروف
+    const qn = normAr(t).replace(/^(ال)?جز[ءي]?\s*/, '');
+    if (qn) JUZ_NAMES.forEach((nm, i) => { if (normAr(nm).startsWith(qn) || normAr(nm) === qn) out.push(juzItem(i + 1)); });
+  }
+  return out;
+}
 function highlightWords(x, qn, qk) {
   const toks = qn.split(' ').filter(Boolean), kt = toks.map(skel);
   return x.words.map((w, i) => {
@@ -736,10 +757,12 @@ $('#hSearch').onclick = () => {
   const inp = $('#sq'); let t = 0;
   inp.value = store.get('lastSearch', '');
   const go = () => {
+    const special = specialResults(inp.value);
     const { list, qn, qk } = runSearch(inp.value);
     store.set('lastSearch', inp.value);
-    $('#scount').textContent = qn.length < 2 ? '' : list.length ? `${AR(list.length)} نتيجة` : 'لا نتائج';
-    $('#slist').innerHTML = list.slice(0, 300).map(x =>
+    $('#scount').textContent = qn.length < 2 && !special.length ? '' : list.length ? `${AR(list.length)} نتيجة` : (special.length ? '' : 'لا نتائج');
+    $('#slist').innerHTML = special.map(x => `<button class="sres special" data-kind="${x.kind}" data-n="${x.n}"><div class="sref">${x.title}</div><div class="stext">${x.sub}</div></button>`).join('') +
+      list.slice(0, 300).map(x =>
       `<button class="sres" data-s="${x.s}" data-a="${x.a}" data-p="${x.p}"><div class="sref">سورة ${D.surahs[x.s - 1]}، الآية ${AR(x.a)} – صفحة ${AR(x.p)}</div><div class="stext">${highlightWords(x, qn, qk)}</div></button>`).join('') +
       (list.length > 300 ? `<div class="scount" style="text-align:center;padding:10px">تُعرض أول ٣٠٠ نتيجة؛ زد كلمات البحث لتضييقها</div>` : '');
   };
@@ -747,6 +770,8 @@ $('#hSearch').onclick = () => {
   if (inp.value) go();
   $('#slist').onclick = e => {
     const b = e.target.closest('.sres'); if (!b) return;
+    if (b.dataset.kind === 'page') { closeAll(); goToPageAny(+b.dataset.n); return; }
+    if (b.dataset.kind === 'juz') { closeAll(); goToAyah(...JUZ[+b.dataset.n - 1]); return; }
     const s = +b.dataset.s, a = +b.dataset.a, p = +b.dataset.p;
     closeAll(); goToAyah(s, a, true);
     setTimeout(() => { setSelected([s, a]); const el = cur().querySelector(`[data-a="${s}:${a}"]`); if (el) el.scrollIntoView({ block: 'center' }); }, 120);
