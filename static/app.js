@@ -461,7 +461,7 @@ const TIPS = [
   'اضغط ضغطة مطوّلة على أي آية لتظهر قائمة فيها: التلاوة بأصوات عدد من القراء، وتفسير السعدي.',
   'انقر نقرتين على أي كلمة ليظهر معناها من كتاب «السراج في بيان غريب القرآن» للخضيري.',
   'اضغط ضغطة مطوّلة على رقم الآية لتضع علامة الوقوف، فتتلوّن الآية وتعرف أين انتهيت. والضغطة نفسها تزيلها.',
-  'انقر اسم السورة أعلى الشاشة لفهرس السور وللانتقال إلى علامة الوقوف، ورقم الصفحة للانتقال إلى صفحة، والجزء لقائمة الأجزاء.',
+  'انقر اسم السورة أعلى الشاشة لفهرس السور، وفيه الانتقال إلى علامة الوقوف وإعادة عرض التلميحات، ورقم الصفحة للانتقال إلى صفحة، والجزء لقائمة الأجزاء.',
   'اضغط رمز العدسة أعلى الشاشة للبحث في القرآن بكلمة أو عبارة، ثم اختر النتيجة لتنتقل إلى الآية.',
   'من قائمة المتصفح اختر «إضافة إلى الشاشة الرئيسية» ليظهر المصحف بأيقونة مثل التطبيق، ويعمل بلا إنترنت فيما قرأته.',
 ];
@@ -572,7 +572,9 @@ $('#hSurah').onclick = () => {
   sheet.style.height = '85vh';
   openSheet(`<div class="title">فهرس السور</div>
     ${bookmark ? `<button class="bmrow" id="goBm">◆ علامة الوقوف: ${ayahTitle(...bookmark)}</button>` : ''}
+    <button class="bmrow" id="showTipsBtn" style="background:#FBF6EC;color:#7A2430">💡 عرض التلميحات</button>
     <div class="list">${D.surahs.map((n, i) => `<button class="item" data-p="${D.surahPage[i + 1]}"><span class="n">${AR(i + 1)}</span>سورة ${n}<span class="p">ص ${AR(D.surahPage[i + 1])}</span></button>`).join('')}</div>`);
+  $('#showTipsBtn').onclick = () => { store.set('hideTips', false); closeAll(); showTips(); };
   if (bookmark) $('#goBm').onclick = () => { const p = D.ayahPage.get(bookmark.join(':')); closeAll(); goToPage(p); };
   sheet.querySelector('.list').onclick = e => { const b = e.target.closest('.item'); if (b) { closeAll(); goToPage(+b.dataset.p); } };
 };
