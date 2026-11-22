@@ -351,6 +351,7 @@ function hitEl(t) { return t.closest('.m, .tm') || t.closest('.w, .ta'); }
 for (const host of [pagesEl, tpagesEl]) {
   host.addEventListener('contextmenu', e => e.preventDefault());
   host.addEventListener('pointerdown', e => {
+    if (performance.now() - tipClosedAt < 50) { G.moved = true; return; } // هذه اللمسة أغلقت التلميح
     G.moved = false;
     G.el = hitEl(e.target); G.x = e.clientX; G.y = e.clientY; G.long = false;
     clearTimeout(G.timer);
@@ -642,6 +643,17 @@ function showAudio(s, a) {
 }
 
 // ---------- التلميحات: بطاقة واحدة لكل تلميح ----------
+let tipClosedAt = 0;
+function closeTip(never) {
+  const el = $('#tip'); if (!el) return;
+  if (never) store.set('hideTips', true);
+  store.set('tipIdx', (tipIdx + 1) % TIPS.length); // في المرة القادمة يبدأ بالتلميح التالي
+  el.remove(); tipClosedAt = performance.now();
+}
+// النقر في أي مكان خارج بطاقة التلميح يغلقها (ولا يشغّل التمرير)
+document.addEventListener('pointerdown', e => {
+  const el = $('#tip'); if (el && !el.contains(e.target)) closeTip(false);
+}, true);
 const TIPS = [
   'انقر على الصفحة لتشغيل التمرير التلقائي، وانقر مرة أخرى لإيقافه. وزرّا + و − الأحمران لضبط سرعته.',
   'اضغط ضغطة مطوّلة على أي آية لتظهر قائمة فيها: التلاوة بأصوات عدد من القراء، وتفسير السعدي.',
@@ -671,9 +683,7 @@ function showTips() {
     el.addEventListener('click', e => {
       const t = e.target.closest('button')?.dataset.t; if (!t) return;
       if (t === 'next') { tipIdx = (tipIdx + 1) % TIPS.length; paint(); return; }
-      if (t === 'never') store.set('hideTips', true);
-      store.set('tipIdx', (tipIdx + 1) % TIPS.length); // في المرة القادمة يبدأ بالتلميح التالي
-      el.remove();
+      closeTip(t === 'never');
     });
   }
   const paint = () => {
