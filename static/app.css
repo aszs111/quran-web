@@ -56,10 +56,10 @@ button { font-family: inherit; color: inherit; background: none; border: 0; padd
   display: flex; align-items: center; gap: 14px; transition: opacity .25s; }
 #auto[hidden] { display: none; }
 #auto button { width: 40px; height: 40px; display: grid; place-items: center; }
-#auto svg { width: 26px; height: 26px; fill: rgba(0,0,0,.38); }
+#auto svg { width: 28px; height: 28px; fill: rgba(229,83,83,.85); }  /* كل أزرار التمرير بالأحمر */
 #auto .big svg { width: 34px; height: 34px; }
 #auto .pm svg { width: 32px; height: 32px; fill: rgba(229,83,83,.85); }  /* + و − بأحمر خفيف واضح */
-#speed { width: 22px; text-align: center; font-size: 19px; color: rgba(0,0,0,.40); }
+#speed { width: 22px; text-align: center; font-size: 21px; font-weight: 600; color: rgba(229,83,83,.85); }
 
 /* القوائم والنوافذ */
 .pop { position: fixed; z-index: 12; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 230px;
