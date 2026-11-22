@@ -307,6 +307,7 @@ function openSheet(html, center = false) {
   sheet.hidden = false; $('#veil').hidden = false;
 }
 function closeAll() {
+  tafAuto.stop();
   $('#menu').hidden = true; sheet.hidden = true; $('#veil').hidden = true;
   stopAudio(); setSelected(null);
 }
@@ -335,15 +336,52 @@ async function showTafsir(s, a) {
     <div class="title">${ayahTitle(s, a)}</div>
     ${at !== a ? `<div class="note">فُسِّرت هذه الآية مع الآية ${AR(at)}</div>` : ''}
     <div class="hr"></div>
-    <div class="body">${body}</div>
-    <div class="row">
+    <div class="body" id="tBody">${body}</div>
+    <div class="row" style="align-items:center">
       <button class="tbtn" id="tPrev" ${prev ? '' : 'disabled'}>الآية السابقة</button>
+      <div class="tauto">
+        <button data-t="faster" aria-label="أسرع"><svg viewBox="0 0 24 24"><path d="M10.5 4h3v6.5H20v3h-6.5V20h-3v-6.5H4v-3h6.5z"/></svg></button>
+        <button data-t="toggle" aria-label="تمرير تلقائي"><svg viewBox="0 0 24 24"><path id="tIcon" d="M8 5l11 7-11 7z"/></svg></button>
+        <span id="tSpeed"></span>
+        <button data-t="slower" aria-label="أبطأ"><svg viewBox="0 0 24 24"><path d="M4 10.5h16v3H4z"/></svg></button>
+      </div>
       <button class="tbtn" id="tNext" ${next ? '' : 'disabled'}>الآية التالية</button>
     </div>`);
   sheet.style.height = '85vh';
+  // التمرير التلقائي في التفسير: نقرة على النص تشغّله وتوقفه
+  const tb = $('#tBody'), TA = tafAuto;
+  TA.stop(); TA.el = tb; TA.paint();
+  tb.onclick = () => TA.set(!TA.running);
+  sheet.querySelector('.tauto').onclick = e => {
+    const t = e.target.closest('button')?.dataset.t; if (!t) return;
+    if (t === 'toggle') return TA.set(!TA.running);
+    TA.speed = Math.max(1, Math.min(20, TA.speed + (t === 'faster' ? 1 : -1)));
+    store.set('tafSpeed', TA.speed); TA.paint();
+  };
   if (prev) $('#tPrev').onclick = () => showTafsir(...prev);
   if (next) $('#tNext').onclick = () => showTafsir(...next);
 }
+
+const tafAuto = {
+  el: null, running: false, speed: store.get('tafSpeed', 3), acc: 0, last: 0,
+  paint() {
+    const i = $('#tIcon'); if (i) i.setAttribute('d', this.running ? 'M6 5h4v14H6zM14 5h4v14h-4z' : 'M8 5l11 7-11 7z');
+    const sp = $('#tSpeed'); if (sp) sp.textContent = AR(this.speed);
+  },
+  set(r) { this.running = r; this.last = 0; this.acc = 0; this.paint(); if (r) requestAnimationFrame(t => this.tick(t)); },
+  stop() { this.running = false; this.paint(); },
+  tick(t) {
+    if (!this.running || !this.el || !this.el.isConnected || sheet.hidden) { this.running = false; return; }
+    if (this.last) {
+      this.acc += this.speed * 6 * (t - this.last) / 1000;
+      const step = Math.floor(this.acc);
+      if (step >= 1) { this.el.scrollTop += step; this.acc -= step; }
+      if (this.el.scrollTop + this.el.clientHeight >= this.el.scrollHeight - 1) { this.stop(); return; }
+    }
+    this.last = t;
+    requestAnimationFrame(tt => this.tick(tt));
+  },
+};
 
 // ---------- معنى الكلمة ----------
 async function showWord(s, a, wi, glyphText) {
