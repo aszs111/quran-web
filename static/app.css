@@ -108,3 +108,6 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 #toast { position: fixed; z-index: 30; left: 50%; bottom: 80px; transform: translateX(-50%); background: rgba(30,30,30,.88); color: #fff;
   font-size: 19px; padding: 8px 16px; border-radius: 20px; white-space: nowrap; }
 #toast[hidden] { display: none; }
+.tip { display: flex; flex-direction: column; padding: 8px 2px; border-bottom: 1px solid #eef1f3; }
+.tip b { font-size: 22px; color: var(--accent); font-weight: 600; }
+.tip span { font-size: 20px; color: var(--ink); line-height: 1.4; }

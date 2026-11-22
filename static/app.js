@@ -56,6 +56,7 @@ async function boot() {
   goToPos(pos);
   $('#loading').remove();
   onScroll();
+  if (!store.get('hideTips', false)) showTips();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
@@ -414,6 +415,25 @@ function showAudio(s, a) {
   $('#aStop').onclick = () => { stopAudio(); [A.s, A.a] = A.start; $('#aTitle').textContent = ayahTitle(A.s, A.a); paintAudio(); };
   $('#aRange').oninput = e => { A.rate = +e.target.value; player.playbackRate = A.rate; rateLbl(); store.set('rate', A.rate); };
   $('#aCont').onchange = e => { A.cont = e.target.checked; store.set('continuous', A.cont); };
+}
+
+// ---------- التلميحات ----------
+const TIPS = [
+  ['نقرة على الصفحة', 'تشغيل التمرير التلقائي وإيقافه، وزرّا + و − لضبط سرعته'],
+  ['ضغطة مطوّلة على الآية', 'قائمة فيها التلاوة بأصوات عدد من القراء، وتفسير السعدي'],
+  ['نقرتان على الكلمة', 'معنى الكلمة من «الميسّر في غريب القرآن»'],
+  ['ضغطة مطوّلة على رقم الآية', 'علامة الوقوف: تلوّن الآية لتعرف أين انتهيت، والضغطة نفسها تزيلها'],
+  ['اسم السورة أعلى الشاشة', 'فهرس السور، وفيه الانتقال إلى علامة الوقوف'],
+  ['رقم الصفحة / الجزء', 'الانتقال إلى صفحة، أو إلى جزء'],
+  ['قائمة المتصفح ← «إضافة إلى الشاشة الرئيسية»', 'ليظهر المصحف بأيقونة مثل التطبيق'],
+];
+function showTips() {
+  sheet.style.height = '';
+  openSheet(`<div class="title" style="text-align:center">طريقة الاستخدام</div>
+    <div class="list" style="max-height:60vh">${TIPS.map(([a, b]) => `<div class="tip"><b>${a}</b><span>${b}</span></div>`).join('')}</div>
+    <label class="chk"><input type="checkbox" id="tipNo">لا تُظهر هذا مرة أخرى</label>
+    <div class="row" style="justify-content:center"><button class="tbtn" id="tipOk" style="font-size:24px">حسنًا</button></div>`, true);
+  $('#tipOk').onclick = () => { store.set('hideTips', $('#tipNo').checked); closeAll(); };
 }
 
 // ---------- الفهارس ----------
