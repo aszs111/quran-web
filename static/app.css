@@ -150,7 +150,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .tsh { height: calc(var(--tsize) * 2.2); display: flex; align-items: center; margin: 10px 0 4px; }
 .tsh .sh { height: 100%; font-size: calc(var(--tsize) * 0.95); }
 .tbs { font-family: hafs, serif; font-size: var(--tsize); text-align: center; line-height: 2.2; -webkit-text-stroke: .012em #000; }
-.pmark { display: flex; align-items: center; gap: 10px; margin: 6px 0; color: var(--muted); font-size: 16px; }
+.pmark { display: flex; align-items: center; gap: 12px; margin: 8px 0; color: var(--accent); font-size: 24px; font-weight: 700; }
 .pmark::before, .pmark::after { content: ""; flex: 1; height: 1px; background: rgba(31,92,74,.22); }
 .hmode { font-size: 19px; font-weight: 700; color: var(--accent); border: 1.5px solid var(--accent); border-radius: 9px; padding: 0 7px; height: 28px; }
 .hmode.on { background: var(--accent); color: #fff; }
@@ -159,3 +159,4 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 /* النسخ */
 .copytext { font-family: hafs, serif; font-size: 28px; line-height: 2.1; text-align: justify; background: #fff; border-radius: 12px;
   padding: 10px 14px; margin: 6px 0 12px; max-height: 50vh; overflow-y: auto; -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+#hPage { font-size: 26px; font-weight: 700; color: var(--accent); }

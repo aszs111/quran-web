@@ -193,7 +193,7 @@ function updateHeader() {
   if (key === lastHeader) return;
   lastHeader = key;
   $('#hSurah').textContent = D.surahs[s - 1];
-  $('#hPage').textContent = AR(p);
+  $('#hPage').textContent = String(p); // أرقام لاتينية
   $('#hJuz').textContent = 'الجزء ' + JUZ_NAMES[juzOf(s, a) - 1];
 }
 
@@ -243,7 +243,7 @@ async function buildText() {
       const cls = isBm(s, a) ? ' bm' : '';
       h += `<span class="ta${cls}" data-a="${s}:${a}">${esc(body)}\u00a0<span class="tm" data-a="${s}:${a}">${esc(num)}</span></span> `;
     }
-    h += `</p><div class="pmark"><span>${AR(p)}</span></div></section>`;
+    h += `</p><div class="pmark"><span>${p}</span></div></section>`;
   });
   tpagesEl.innerHTML = h.replace(/<p class="tx"><\/p>/g, '');
   tsize(TX.size);
@@ -266,7 +266,7 @@ function updateTextHeader() {
   const p = TX.ayahPage.get(k), j = TX.juz.get(k);
   const key = 't' + s + '|' + p + '|' + j; if (key === lastHeader) return; lastHeader = key;
   $('#hSurah').textContent = D.surahs[s - 1];
-  $('#hPage').textContent = AR(p);
+  $('#hPage').textContent = String(p);
   $('#hJuz').textContent = 'الجزء ' + JUZ_NAMES[j - 1];
   store.set('tpos', [s, a]);
 }
