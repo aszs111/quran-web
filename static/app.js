@@ -424,6 +424,7 @@ const TIPS = [
   'انقر نقرتين على أي كلمة ليظهر معناها من كتاب «السراج في بيان غريب القرآن» للخضيري.',
   'اضغط ضغطة مطوّلة على رقم الآية لتضع علامة الوقوف، فتتلوّن الآية وتعرف أين انتهيت. والضغطة نفسها تزيلها.',
   'انقر اسم السورة أعلى الشاشة لفهرس السور وللانتقال إلى علامة الوقوف، ورقم الصفحة للانتقال إلى صفحة، والجزء لقائمة الأجزاء.',
+  'اضغط رمز العدسة أعلى الشاشة للبحث في القرآن بكلمة أو عبارة، ثم اختر النتيجة لتنتقل إلى الآية.',
   'من قائمة المتصفح اختر «إضافة إلى الشاشة الرئيسية» ليظهر المصحف بأيقونة مثل التطبيق، ويعمل بلا إنترنت فيما قرأته.',
 ];
 let tipIdx = store.get('tipIdx', 0) % TIPS.length;
@@ -456,6 +457,77 @@ function showTips() {
   };
   paint();
 }
+
+// ---------- البحث في القرآن ----------
+// يطابق ما يكتبه المستخدم بالإملاء الحديث على الرسم العثماني: تُحذف الحركات وتوحَّد الهمزات،
+// ثم يُقارن «هيكل» الكلمة دون حروف المد (ا و ي) حتى تُوجد «الصلاة» في «الصلوة» و«الكتاب» في «الكتب».
+const normAr = t => t.replace(/ (?=[\u0670\u0640])/g, '')
+  .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u08D3-\u08FF\u0640\u2060]/g, '')
+  .replace(/[ٱأإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ة/g, 'ه').replace(/ء/g, '')
+  .replace(/[^\u0621-\u064A ]/g, '').replace(/\s+/g, ' ').trim();
+const skel = t => t.replace(/[اوي]/g, '');
+let SI = null; // فهرس البحث
+function searchIndex() {
+  if (SI) return SI;
+  const m = new Map();
+  D.pages.forEach((lines, pi) => lines.forEach(l => {
+    if (l[0] !== 't') return;
+    for (const w of l[1]) {
+      const k = w[0] + ':' + w[1];
+      if (!m.has(k)) m.set(k, { s: w[0], a: w[1], p: pi + 1, words: [] });
+      m.get(k).words.push(w[4]);
+    }
+  }));
+  SI = [...m.values()].map(x => {
+    const n = x.words.map(normAr), k = n.map(skel);
+    return { ...x, n, k, nj: ' ' + n.join(' ') + ' ', kj: ' ' + k.join(' ') + ' ' };
+  });
+  return SI;
+}
+function runSearch(q) {
+  const qn = normAr(q); if (qn.replace(/ /g, '').length < 2) return { list: [], qn };
+  const qk = skel(qn).trim();
+  const exact = [], loose = [];
+  for (const x of searchIndex()) {
+    if (x.nj.includes(qn)) exact.push(x);
+    else if (qk && x.kj.includes(qk)) loose.push(x);
+  }
+  return { list: exact.concat(loose), qn, qk };
+}
+function highlightWords(x, qn, qk) {
+  const toks = qn.split(' ').filter(Boolean), kt = toks.map(skel);
+  return x.words.map((w, i) => {
+    const hit = toks.some((t, j) => x.n[i].includes(t) || (kt[j] && x.k[i].includes(kt[j])));
+    const shown = w.replace(/[\u06D6-\u06DC\u06DE-\u06ED]/g, ''); // علامات الوقف لا يعرضها خط المركزي
+    return hit ? `<mark>${esc(shown)}</mark>` : esc(shown);
+  }).join(' ');
+}
+$('#hSearch').onclick = () => {
+  sheet.style.height = '88vh';
+  openSheet(`<div class="title">البحث في القرآن</div>
+    <div class="sbox"><input class="inp" id="sq" type="search" placeholder="اكتب كلمة أو عبارة" autocomplete="off"></div>
+    <div class="scount" id="scount"></div>
+    <div class="list" id="slist"></div>`);
+  const inp = $('#sq'); let t = 0;
+  inp.value = store.get('lastSearch', '');
+  const go = () => {
+    const { list, qn, qk } = runSearch(inp.value);
+    store.set('lastSearch', inp.value);
+    $('#scount').textContent = qn.length < 2 ? '' : list.length ? `${AR(list.length)} نتيجة` : 'لا نتائج';
+    $('#slist').innerHTML = list.slice(0, 300).map(x =>
+      `<button class="sres" data-s="${x.s}" data-a="${x.a}" data-p="${x.p}"><div class="sref">سورة ${D.surahs[x.s - 1]}، الآية ${AR(x.a)} – صفحة ${AR(x.p)}</div><div class="stext">${highlightWords(x, qn, qk)}</div></button>`).join('') +
+      (list.length > 300 ? `<div class="scount" style="text-align:center;padding:10px">تُعرض أول ٣٠٠ نتيجة؛ زد كلمات البحث لتضييقها</div>` : '');
+  };
+  inp.oninput = () => { clearTimeout(t); t = setTimeout(go, 200); };
+  if (inp.value) go();
+  $('#slist').onclick = e => {
+    const b = e.target.closest('.sres'); if (!b) return;
+    const s = +b.dataset.s, a = +b.dataset.a, p = +b.dataset.p;
+    closeAll(); goToPage(p);
+    setTimeout(() => { setSelected([s, a]); const el = document.querySelector(`[data-a="${s}:${a}"]`); if (el) el.scrollIntoView({ block: 'center' }); }, 120);
+  };
+  setTimeout(() => inp.focus(), 50);
+};
 
 // ---------- الفهارس ----------
 $('#hSurah').onclick = () => {
