@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """يجهّز بيانات التطبيق في app/src/main/assets من مصادرها:
 - تخطيط المصحف وخطوط مجمع الملك فهد QPC V1: github.com/zonetecde/mushaf-layout
-- تفسير السعدي والميسّر في غريب القرآن: github.com/spa5k/tafsir_api
+- تفسير السعدي: github.com/spa5k/tafsir_api
+- السراج في بيان غريب القرآن: quranpedia.net (scripts/siraj-quranpedia-2013.json.gz)
 الاستعمال: prepare_assets.py <مجلد mushaf-layout> <مجلد tafsir الخام> <مجلد assets>
 مجلد tafsir الخام يحوي saadi/{1..114}.json و gharib/{1..114}.json
 """
@@ -76,39 +77,51 @@ def norm(t, skel=False):
 
 os.makedirs(os.path.join(out, 'gharib'), exist_ok=True)
 tot = ok = 0
-ENTRY = re.compile(r'﴿(.+?)﴾\s*:\s*(.+)', re.S)
-for s in range(1, 115):
-    d = json.load(open(os.path.join(tafsir_dir, 'gharib', '%d.json' % s), encoding='utf-8'))
-    res = []
-    for x in d:
-        a = x['ayah']
-        aw = words_by_ayah.get((s, a), [])
-        for para in re.split(r'\n\s*\n', x['text']):
-            m = ENTRY.match(para.strip())
-            if not m:
+# «السراج في بيان غريب القرآن» للخضيري — من بيانات الموسوعة القرآنية quranpedia.net (إصدار 2026-08-10)
+import gzip
+siraj = json.load(gzip.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'siraj-quranpedia-2013.json.gz'), 'rt', encoding='utf-8'))
+by_surah = {}
+for x in siraj['ayahs']:
+    for c in x['content']:
+        t = re.sub(r'<br\s*/?>', '\n', c['text']); t = re.sub(r'<[^>]+>', '', t)
+        for ln in (l.strip() for l in t.split('\n')):
+            if ':' not in ln:
                 continue
-            phrase, meaning = m.group(1).strip(), m.group(2).strip()
-            tot += 1
-            covered = []
-            for skel in (False, True):
-                pw = [w for w in norm(phrase, skel).split() if w]
-                keys = [norm(t, skel) for _, t in aw]
-                n = len(pw)
-                for i in range(len(keys) - n + 1):
-                    if keys[i:i + n] == pw:
-                        covered = [aw[j][0] for j in range(i, i + n)]
-                        break
-                if not covered and n > 1:
-                    # مطابقة جزئية: كل كلمة على حدة
-                    covered = [aw[j][0] for j, k in enumerate(keys) if k in pw]
-                if covered:
-                    break
+            phrase, meaning = (p.strip() for p in ln.split(':', 1))
+            by_surah.setdefault(x['surah'], []).append((x['ayah'], phrase, meaning))
+def link(phrase, aw):
+    for skel in (False, True):
+        pw = [w for w in norm(phrase, skel).split() if w]
+        keys = [norm(t, skel) for _, t in aw]
+        n = len(pw)
+        for i in range(len(keys) - n + 1):
+            if keys[i:i + n] == pw:
+                return [aw[j][0] for j in range(i, i + n)]
+        if n > 1:
+            c = [aw[j][0] for j, k in enumerate(keys) if k in pw]
+            if len(c) * 2 >= n:
+                return c
+    return []
+
+for s in range(1, 115):
+    res = []
+    for a, phrase, meaning in by_surah.get(s, []):
+        tot += 1
+        covered = []
+        # الآية المذكورة أولًا، ثم ما جاورها (في الكتاب أرقام آيات قليلة فيها سهو)
+        for cand in [a] + [a + d for k in range(1, 11) for d in (k, -k)]:
+            if (s, cand) not in words_by_ayah:
+                continue
+            covered = link(phrase, words_by_ayah[(s, cand)])
             if covered:
-                ok += 1
-            res.append({'a': a, 'w': covered, 'p': phrase, 'm': meaning})
+                a = cand
+                break
+        if covered:
+            ok += 1
+        res.append({'a': a, 'w': covered, 'p': phrase, 'm': meaning})
     json.dump(res, open(os.path.join(out, 'gharib', '%d.json' % s), 'w', encoding='utf-8'),
               ensure_ascii=False, separators=(',', ':'))
-print('gharib entries', tot, 'linked to words', ok)
+print('siraj entries', tot, 'linked to words', ok)
 
 # ---------- الخطوط: woff2 -> ttf ----------
 if '--no-fonts' not in sys.argv:
