@@ -59,7 +59,13 @@ async function boot() {
   goToPos(pos);
   $('#loading').remove();
   onScroll();
-  if (mode === 'text') { mode = 'pages'; await setMode('text'); const tp = store.get('tpos', null); if (tp) goToAyah(tp[0], tp[1]); }
+  if (mode === 'text') {
+    mode = 'pages'; await setMode('text');
+    const tp = store.get('tpos', null); if (tp) goToAyah(tp[0], tp[1]);
+    // نعيد حساب الشريط العلوي بعد استقرار الصفحة
+    lastHeader = ''; requestAnimationFrame(() => requestAnimationFrame(updateTextHeader));
+    setTimeout(() => { lastHeader = ''; updateTextHeader(); }, 2200);
+  }
   if (!store.get('hideTips', false)) showTips();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
@@ -252,9 +258,11 @@ async function buildText() {
 function textAyahAtCenter() {
   const r = tscroller.getBoundingClientRect();
   for (const dy of [0, -20, 20, -40, 40, -80, 80]) {
-    const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2 + dy);
-    const ta = el && el.closest && el.closest('.ta');
-    if (ta) return ta;
+    // elementsFromPoint يتجاوز ما فوق النص (الشاشة الافتتاحية، بطاقة التلميح)
+    for (const el of document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2 + dy)) {
+      const ta = el.closest && el.closest('.ta');
+      if (ta) return ta;
+    }
   }
   return null;
 }
