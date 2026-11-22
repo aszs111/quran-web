@@ -108,6 +108,16 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 #toast { position: fixed; z-index: 30; left: 50%; bottom: 80px; transform: translateX(-50%); background: rgba(30,30,30,.88); color: #fff;
   font-size: 19px; padding: 8px 16px; border-radius: 20px; white-space: nowrap; }
 #toast[hidden] { display: none; }
-.tip { display: flex; flex-direction: column; padding: 8px 2px; border-bottom: 1px solid #eef1f3; }
-.tip b { font-size: 22px; color: var(--accent); font-weight: 600; }
-.tip span { font-size: 20px; color: var(--ink); line-height: 1.4; }
+/* بطاقة التلميحات */
+#tip { position: fixed; z-index: 9; left: 14px; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 70px); max-width: 560px; margin: 0 auto;
+  background: #FBF6EC; border: 2px solid #C9A44C; border-radius: 24px; padding: 14px 18px 16px; box-shadow: 0 8px 28px rgba(0,0,0,.22); color: #5C1F28; }
+.tip-head { display: flex; align-items: center; gap: 8px; }
+.tip-head .bulb { width: 22px; height: 22px; fill: #D9A72E; }
+.tip-head b { font-size: 27px; color: #7A2430; }
+.badge { background: #2E7D32; color: #fff; font-size: 19px; font-weight: 600; padding: 2px 12px; border-radius: 9px; }
+.count { margin-inline-start: auto; font-size: 20px; color: #A07A72; }
+.tip-text { font-size: 24px; line-height: 1.75; margin: 10px 0 14px; }
+.tip-btns { display: flex; align-items: center; gap: 8px; }
+.tb { font-size: 21px; font-weight: 600; padding: 8px 13px; border-radius: 14px; white-space: nowrap; }
+.tb.out { border: 2px solid #E2CFA0; color: #7A2430; background: #FBF6EC; }
+.tb.fill { background: #7A2430; color: #fff; border: 2px solid #7A2430; }

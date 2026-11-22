@@ -417,23 +417,44 @@ function showAudio(s, a) {
   $('#aCont').onchange = e => { A.cont = e.target.checked; store.set('continuous', A.cont); };
 }
 
-// ---------- التلميحات ----------
+// ---------- التلميحات: بطاقة واحدة لكل تلميح ----------
 const TIPS = [
-  ['نقرة على الصفحة', 'تشغيل التمرير التلقائي وإيقافه، وزرّا + و − لضبط سرعته'],
-  ['ضغطة مطوّلة على الآية', 'قائمة فيها التلاوة بأصوات عدد من القراء، وتفسير السعدي'],
-  ['نقرتان على الكلمة', 'معنى الكلمة من «الميسّر في غريب القرآن»'],
-  ['ضغطة مطوّلة على رقم الآية', 'علامة الوقوف: تلوّن الآية لتعرف أين انتهيت، والضغطة نفسها تزيلها'],
-  ['اسم السورة أعلى الشاشة', 'فهرس السور، وفيه الانتقال إلى علامة الوقوف'],
-  ['رقم الصفحة / الجزء', 'الانتقال إلى صفحة، أو إلى جزء'],
-  ['قائمة المتصفح ← «إضافة إلى الشاشة الرئيسية»', 'ليظهر المصحف بأيقونة مثل التطبيق'],
+  'انقر على الصفحة لتشغيل التمرير التلقائي، وانقر مرة أخرى لإيقافه. وزرّا + و − الأحمران لضبط سرعته.',
+  'اضغط ضغطة مطوّلة على أي آية لتظهر قائمة فيها: التلاوة بأصوات عدد من القراء، وتفسير السعدي.',
+  'انقر نقرتين على أي كلمة ليظهر معناها من كتاب «الميسّر في غريب القرآن».',
+  'اضغط ضغطة مطوّلة على رقم الآية لتضع علامة الوقوف، فتتلوّن الآية وتعرف أين انتهيت. والضغطة نفسها تزيلها.',
+  'انقر اسم السورة أعلى الشاشة لفهرس السور وللانتقال إلى علامة الوقوف، ورقم الصفحة للانتقال إلى صفحة، والجزء لقائمة الأجزاء.',
+  'من قائمة المتصفح اختر «إضافة إلى الشاشة الرئيسية» ليظهر المصحف بأيقونة مثل التطبيق، ويعمل بلا إنترنت فيما قرأته.',
 ];
+let tipIdx = store.get('tipIdx', 0) % TIPS.length;
 function showTips() {
-  sheet.style.height = '';
-  openSheet(`<div class="title" style="text-align:center">طريقة الاستخدام</div>
-    <div class="list" style="max-height:60vh">${TIPS.map(([a, b]) => `<div class="tip"><b>${a}</b><span>${b}</span></div>`).join('')}</div>
-    <label class="chk"><input type="checkbox" id="tipNo">لا تُظهر هذا مرة أخرى</label>
-    <div class="row" style="justify-content:center"><button class="tbtn" id="tipOk" style="font-size:24px">حسنًا</button></div>`, true);
-  $('#tipOk').onclick = () => { store.set('hideTips', $('#tipNo').checked); closeAll(); };
+  let el = $('#tip');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'tip';
+    el.innerHTML = `<div class="tip-head">
+        <svg class="bulb" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26A7 7 0 0 0 12 2zM9 20h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/></svg>
+        <b>تلميح</b><span class="badge">جديد</span><span class="count"></span></div>
+      <div class="tip-text"></div>
+      <div class="tip-btns">
+        <button class="tb out" data-t="never">لا تظهر التلميحات</button>
+        <span style="flex:1"></span>
+        <button class="tb out" data-t="next">التالي</button>
+        <button class="tb fill" data-t="ok">فهمت</button>
+      </div>`;
+    document.body.appendChild(el);
+    el.addEventListener('click', e => {
+      const t = e.target.closest('button')?.dataset.t; if (!t) return;
+      if (t === 'next') { tipIdx = (tipIdx + 1) % TIPS.length; paint(); return; }
+      if (t === 'never') store.set('hideTips', true);
+      store.set('tipIdx', (tipIdx + 1) % TIPS.length); // في المرة القادمة يبدأ بالتلميح التالي
+      el.remove();
+    });
+  }
+  const paint = () => {
+    el.querySelector('.count').textContent = `تلميح ${AR(tipIdx + 1)} من ${AR(TIPS.length)}`;
+    el.querySelector('.tip-text').textContent = TIPS[tipIdx];
+  };
+  paint();
 }
 
 // ---------- الفهارس ----------
