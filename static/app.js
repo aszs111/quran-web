@@ -194,7 +194,7 @@ function updateHeader() {
   lastHeader = key;
   $('#hSurah').textContent = D.surahs[s - 1];
   $('#hPage').textContent = String(p); // أرقام لاتينية
-  $('#hJuz').textContent = 'الجزء ' + JUZ_NAMES[juzOf(s, a) - 1];
+  $('#hJuz').textContent = 'الجزء ' + juzOf(s, a); // رقم لاتيني قصير لا ينقطع
 }
 
 let scrollQueued = false, saveTimer = 0;
@@ -267,7 +267,7 @@ function updateTextHeader() {
   const key = 't' + s + '|' + p + '|' + j; if (key === lastHeader) return; lastHeader = key;
   $('#hSurah').textContent = D.surahs[s - 1];
   $('#hPage').textContent = String(p);
-  $('#hJuz').textContent = 'الجزء ' + JUZ_NAMES[j - 1];
+  $('#hJuz').textContent = 'الجزء ' + j;
   store.set('tpos', [s, a]);
 }
 tscroller.addEventListener('scroll', () => { requestAnimationFrame(updateTextHeader); }, { passive: true });

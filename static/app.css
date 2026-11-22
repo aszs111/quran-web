@@ -159,5 +159,5 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 /* النسخ */
 .copytext { font-family: hafs, serif; font-size: 28px; line-height: 2.1; text-align: justify; background: #fff; border-radius: 12px;
   padding: 10px 14px; margin: 6px 0 12px; max-height: 50vh; overflow-y: auto; -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
-#hPage { font-size: 26px; font-weight: 700; color: var(--accent); }
+#hPage { font-size: 24px; font-weight: 700; color: var(--accent); }
 .sres.special { background: #FBF6EC; border-radius: 10px; margin-bottom: 4px; }
