@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#EEF5FB">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="المصحف">
+<title>المصحف</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header id="top">
+  <button id="hSurah" class="hcell start"></button>
+  <button id="hPage" class="hcell mid"></button>
+  <button id="hJuz" class="hcell end"></button>
+</header>
+
+<main id="scroller"><div id="pages"></div></main>
+
+<div id="loading">جارٍ تحميل المصحف…</div>
+
+<!-- شريط التمرير التلقائي: بلا إطار، أيقونات شفافة -->
+<div id="auto" hidden>
+  <button data-act="faster" aria-label="أسرع"><svg viewBox="0 0 24 24"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg></button>
+  <button data-act="stop" aria-label="إيقاف"><svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg></button>
+  <button data-act="toggle" class="big" aria-label="تشغيل"><svg viewBox="0 0 24 24"><path id="playIcon" d="M8 5l11 7-11 7z"/></svg></button>
+  <span id="speed"></span>
+  <button data-act="slower" aria-label="أبطأ"><svg viewBox="0 0 24 24"><path d="M4 11h16v2H4z"/></svg></button>
+</div>
+
+<div id="menu" class="pop" hidden>
+  <div class="ptitle" id="menuTitle"></div>
+  <button data-act="recite">التلاوة</button>
+  <button data-act="tafsir">التفسير</button>
+</div>
+
+<div id="veil" hidden></div>
+<section id="sheet" hidden></section>
+<div id="toast" hidden></div>
+<audio id="player" preload="auto"></audio>
+
+<script src="app.js"></script>
+</body>
+</html>
