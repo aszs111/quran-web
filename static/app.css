@@ -156,3 +156,6 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .hmode.on { background: var(--accent); color: #fff; }
 #loading2 { position: fixed; inset: 40% 20% auto; z-index: 20; background: #fff; border-radius: 14px; padding: 14px; text-align: center; font-size: 22px; box-shadow: 0 6px 24px rgba(0,0,0,.15); }
 #loading2[hidden] { display: none; }
+/* النسخ */
+.copytext { font-family: hafs, serif; font-size: 28px; line-height: 2.1; text-align: justify; background: #fff; border-radius: 12px;
+  padding: 10px 14px; margin: 6px 0 12px; max-height: 50vh; overflow-y: auto; -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }

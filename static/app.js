@@ -448,6 +448,7 @@ $('#menu').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b || !selected) return;
   if (b.dataset.act === 'tafsir') showTafsir(...selected);
   if (b.dataset.act === 'recite') showAudio(...selected);
+  if (b.dataset.act === 'copy') showCopy(...selected);
 });
 const ayahTitle = (s, a) => `سورة ${D.surahs[s - 1]} – الآية ${AR(a)}`;
 
@@ -542,6 +543,47 @@ async function showWordText(s, a, wi, word) {
     <div class="word">﴿${esc(e ? e.p : word)}﴾</div>
     <div class="body" style="flex:none;margin:8px 0;${e ? '' : 'color:var(--muted)'}">${e ? esc(e.m) : 'لم يذكر كتاب «السراج في بيان غريب القرآن» معنًى لهذه الكلمة.'}</div>
     <div class="small">${ayahTitle(s, a)} · السراج في بيان غريب القرآن</div>`, true);
+}
+
+// ---------- النسخ ----------
+// نص الآية بالرسم العثماني (بيانات المجمع)، قابل للتحديد، مع زر لنسخ الآية كاملة بعزوها
+const AYAH_TEXT = new Map();
+async function ayahText(s, a) {
+  if (!AYAH_TEXT.size) {
+    const pages = await json('data/text.json');
+    for (const ays of pages) for (const [ss, aa, , t] of ays) {
+      const k = t.lastIndexOf('\u00a0'); AYAH_TEXT.set(ss + ':' + aa, k > 0 ? t.slice(0, k) : t);
+    }
+  }
+  if (!document.fonts.check('20px hafs')) {
+    try { const ff = new FontFace('hafs', 'url(fonts/hafs.woff2) format("woff2")'); await ff.load(); document.fonts.add(ff); } catch {}
+  }
+  return AYAH_TEXT.get(s + ':' + a) || '';
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); }
+  catch { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  toast('نُسخ');
+}
+async function showCopy(s, a) {
+  setSelected([s, a]);
+  const t = await ayahText(s, a);
+  const cite = `[${D.surahs[s - 1]}: ${AR(a)}]`;
+  sheet.style.height = '';
+  openSheet(`
+    <div class="small">نسخ</div>
+    <div class="title">${ayahTitle(s, a)}</div>
+    <div class="small" style="margin:4px 0">حدّد بإصبعك الجزء الذي تريده ثم انسخه، أو انسخ الآية كاملة.</div>
+    <div class="copytext" id="cpText">﴿${esc(t)}﴾</div>
+    <div class="row" style="justify-content:center;gap:10px">
+      <button class="tb fill" id="cpAll">نسخ الآية كاملة</button>
+      <button class="tb out" id="cpSel">نسخ المحدد</button>
+    </div>`);
+  $('#cpAll').onclick = () => copyText(`﴿${t}﴾ ${cite}`);
+  $('#cpSel').onclick = () => {
+    const sel = String(getSelection() || '').trim();
+    if (sel) copyText(sel); else toast('حدّد جزءًا من الآية أولًا');
+  };
 }
 
 // ---------- التلاوة ----------
