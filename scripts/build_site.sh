@@ -13,6 +13,9 @@ cp scripts/line_widths.json site/data/
 cp -r static/. site/
 cp src/layout/fonts/QPC1/p*.woff2 site/fonts/
 cp src/layout/fonts/QPC1/QPC1BSML.ttf site/fonts/bsml.ttf
+# رقم إصدار لملفات الواجهة حتى لا يخلط المتصفح نسخة قديمة بجديدة
+V="${GITHUB_RUN_NUMBER:-dev}-$(date +%s)"
+sed -i "s/app\.css\"/app.css?v=$V\"/; s/app\.js\"/app.js?v=$V\"/" site/index.html
 sed -i "s/__BUILD__/${GITHUB_RUN_NUMBER:-dev}-$(date +%s)/" site/sw.js
 touch site/.nojekyll
 du -sh site

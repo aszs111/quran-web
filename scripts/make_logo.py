@@ -4,7 +4,7 @@ from fontTools.ttLib import TTFont
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
 
-GREEN, RED, GOLD, DARK = '#0E5A45', '#8E1B1B', '#D7B36A', '#123F33'
+GREEN, RED, GOLD, DARK = '#2F8A6E', '#C2564C', '#D6B45F', '#3E9479'  # ألوان فاتحة
 C = 500  # مركز لوحة 1000×1000
 P = []   # (لون، مسار)
 
@@ -74,7 +74,7 @@ text = []
 for g, x, y in glyphs:
     sp = SVGPathPen(gs); gs[g].draw(TransformPen(sp, (s, 0, 0, -s, tx + x * s, ty - y * s))); d = sp.getCommands()
     if d: text.append(d)
-P.append((GOLD, ' '.join(text)))
+P.append(('#FFF3D6', ' '.join(text)))  # الكلمة بلون عاجي ليظهر على القرص
 
 def svg(bg=True, size=1000):
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="{size}" height="{size}">']
