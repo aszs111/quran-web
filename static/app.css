@@ -175,3 +175,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .wopts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .wopts button { background: #fff; border: 1.5px solid #d8e2e7; border-radius: 12px; padding: 10px; font-size: 22px; color: var(--accent); font-weight: 600; text-align: center; }
 .wopts small { display: block; font-size: 16px; color: var(--muted); font-weight: 400; }
+
+.repRow { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; font-size: 21px; margin-top: 10px; }
+.repRow span { margin-left: 4px; white-space: nowrap; }
+.rep { flex: 1; min-width: 0; height: 34px; padding: 0 4px; border-radius: 17px; border: 1.5px solid var(--accent); color: var(--accent); font-size: 19px; background: transparent; }
+.rep.on { background: var(--accent); color: #fff; }

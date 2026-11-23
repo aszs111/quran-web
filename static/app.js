@@ -764,11 +764,13 @@ async function showCopy(s, a) {
 
 // ---------- التلاوة ----------
 const player = $('#player');
-const A = { s: 0, a: 0, start: null, loaded: false, rec: store.get('reciter', 0), rate: store.get('rate', 1), cont: store.get('continuous', false) };
+const A = { s: 0, a: 0, start: null, loaded: false, rec: store.get('reciter', 0), rate: store.get('rate', 1), cont: store.get('continuous', false), rep: store.get('repeat', 1), cnt: 1 };
+const REPEATS = [1, 2, 3, 5, 7, 10, 0]; // 0 = بلا حد
 function audioUrl(s, a) { return `https://everyayah.com/data/${RECITERS[A.rec][1]}/${pad3(s)}${pad3(a)}.mp3`; }
 function stopAudio() { player.pause(); player.removeAttribute('src'); player.load(); A.loaded = false; }
 function playAyah() {
   $('#aErr') && ($('#aErr').textContent = '');
+  A.cnt = 1;
   player.src = audioUrl(A.s, A.a); player.playbackRate = A.rate; player.defaultPlaybackRate = A.rate;
   A.loaded = true; player.play().catch(() => {});
   setSelected([A.s, A.a]);
@@ -777,6 +779,7 @@ function playAyah() {
 player.addEventListener('play', paintAudio);
 player.addEventListener('pause', paintAudio);
 player.addEventListener('ended', () => {
+  if (A.rep === 0 || A.cnt < A.rep) { A.cnt++; player.currentTime = 0; player.play().catch(() => {}); return; }
   if (A.cont && A.a < D.counts[A.s - 1]) { A.a++; playAyah(); } else { A.loaded = false; paintAudio(); }
 });
 player.addEventListener('error', () => {
@@ -802,7 +805,8 @@ function showAudio(s, a) {
     <div class="err" id="aErr"></div>
     <div style="font-size:21px;margin-top:8px">سرعة القراءة: <span id="aRate"></span></div>
     <input type="range" id="aRange" min="0.5" max="2" step="0.25" value="${A.rate}">
-    <label class="chk"><input type="checkbox" id="aCont" ${A.cont ? 'checked' : ''}>متابعة الآيات التالية تلقائيًا</label>`);
+    <label class="chk"><input type="checkbox" id="aCont" ${A.cont ? 'checked' : ''}>متابعة الآيات التالية تلقائيًا</label>
+    <div class="repRow"><span>تكرار الآية:</span>${REPEATS.map(n => `<button class="rep${n === A.rep ? ' on' : ''}" data-n="${n}">${n === 0 ? '∞' : n === 1 ? 'بلا' : AR(n)}</button>`).join('')}</div>`);
   const rateLbl = () => $('#aRate').textContent = '×' + AR(String(A.rate).replace('.', '٫'));
   rateLbl();
   sheet.querySelector('.reciters').onclick = e => {
@@ -814,6 +818,11 @@ function showAudio(s, a) {
   $('#aPlay').onclick = () => { if (!A.loaded) playAyah(); else if (player.paused) player.play(); else player.pause(); };
   $('#aStop').onclick = () => { stopAudio(); [A.s, A.a] = A.start; $('#aTitle').textContent = ayahTitle(A.s, A.a); paintAudio(); };
   $('#aRange').oninput = e => { A.rate = +e.target.value; player.playbackRate = A.rate; rateLbl(); store.set('rate', A.rate); };
+  sheet.querySelector('.repRow').onclick = e => {
+    const b = e.target.closest('.rep'); if (!b) return;
+    A.rep = +b.dataset.n; store.set('repeat', A.rep);
+    sheet.querySelectorAll('.rep').forEach(x => x.classList.toggle('on', x === b));
+  };
   $('#aCont').onchange = e => { A.cont = e.target.checked; store.set('continuous', A.cont); };
 }
 
