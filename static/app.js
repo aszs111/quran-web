@@ -321,7 +321,8 @@ function zoomKeepingCenter(v) {
 // ======================= ملء الشاشة دون شريط العنوان =======================
 // المتصفح لا يسمح بملء الشاشة إلا بعد لمسة من المستخدم، فنطلبه مع أول لمسة.
 // (Safari على الآيفون لا يدعم هذا؛ الحل هناك «إضافة إلى الشاشة الرئيسية»)
-const isStandalone = () => matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || navigator.standalone;
+// مثبت على الشاشة الرئيسية (لا ملء شاشة طلبناه نحن)
+const isStandalone = () => navigator.standalone || (matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches && !inFull());
 const canFull = () => !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
 const inFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
 function enterFull() {
