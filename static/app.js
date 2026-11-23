@@ -330,15 +330,7 @@ function enterFull() {
   try { (el.requestFullscreen || el.webkitRequestFullscreen).call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch {}
 }
 function exitFull() { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch {} }
-// يُطلب تلقائيًا مرة واحدة في كل فتح؛ فإن خرج منه المستخدم لا نعيده إلا في الفتح القادم
-// (حتى لا يتكرر تنبيه Chrome «للخروج من ملء الشاشة…» مع كل لمسة)
-let fullUsed = false;
-const onFullChange = () => { if (inFull()) fullUsed = true; };
-document.addEventListener('fullscreenchange', onFullChange);
-document.addEventListener('webkitfullscreenchange', onFullChange);
-document.addEventListener('pointerup', () => {
-  if (!fullUsed && store.get('fullscreen', true) && !isStandalone() && canFull() && !inFull()) enterFull();
-}, { capture: true, passive: true });
+// لا ملء شاشة تلقائي؛ يُطلب يدويًا فقط من زر فهرس السور
 
 // ======================= إبقاء الشاشة مضاءة أثناء القراءة =======================
 // Screen Wake Lock: يدعمه Chrome على الأندرويد وSafari على الآيفون (iOS 16.4 فما بعده)؛ يُطلب من جديد عند العودة للتطبيق
@@ -979,11 +971,10 @@ $('#hSurah').onclick = () => {
   openSheet(`<div class="title">فهرس السور</div>
     ${bookmark ? `<button class="bmrow" id="goBm">◆ علامة الوقوف: ${ayahTitle(...bookmark)}</button>` : ''}
     <button class="bmrow" id="showTipsBtn" style="background:#FBF6EC;color:#7A2430">💡 عرض التلميحات</button>
-    ${canFull() && !isStandalone() ? `<button class="bmrow" id="fullBtn" style="background:#EAF3EF;color:var(--accent)">⛶ ${store.get('fullscreen', true) ? 'إيقاف ملء الشاشة' : 'ملء الشاشة دون شريط العنوان'}</button>` : ''}
+    ${canFull() && !isStandalone() ? `<button class="bmrow" id="fullBtn" style="background:#EAF3EF;color:var(--accent)">⛶ ${inFull() ? 'الخروج من ملء الشاشة' : 'ملء الشاشة دون شريط العنوان'}</button>` : ''}
     <div class="list">${D.surahs.map((n, i) => `<button class="item" data-s="${i + 1}" data-p="${D.surahPage[i + 1]}"><span class="n">${AR(i + 1)}</span>سورة ${n}<span class="p">ص ${AR(D.surahPage[i + 1])}</span></button>`).join('')}</div>`);
   if ($('#fullBtn')) $('#fullBtn').onclick = () => {
-    const on = !store.get('fullscreen', true); store.set('fullscreen', on);
-    closeAll(); if (on) enterFull(); else exitFull();
+    const on = !inFull(); closeAll(); if (on) enterFull(); else exitFull();
   };
   $('#showTipsBtn').onclick = () => { store.set('hideTips', false); closeAll(); showTips(); };
   if (bookmark) $('#goBm').onclick = () => { closeAll(); goToAyah(...bookmark, true); };
