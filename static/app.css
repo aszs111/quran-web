@@ -161,3 +161,17 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   padding: 10px 14px; margin: 6px 0 12px; max-height: 50vh; overflow-y: auto; -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 #hPage { font-size: 24px; font-weight: 700; color: var(--accent); }
 .sres.special { background: #FBF6EC; border-radius: 10px; margin-bottom: 4px; }
+/* الورد */
+.wbar { height: 12px; background: #e6edf1; border-radius: 8px; overflow: hidden; margin: 8px 0 4px; }
+.wbar div { height: 100%; background: linear-gradient(90deg, #2F8A6E, #3E9479); border-radius: 8px; }
+.wrow { font-size: 21px; margin: 4px 0; }
+.wrow .ok { color: #2F8A6E; font-weight: 600; } .wrow .late { color: #C2564C; font-weight: 600; }
+.wtabs { display: flex; gap: 6px; margin: 8px 0 4px; }
+.wtabs button { flex: 1; font-size: 20px; padding: 6px; border-radius: 10px; border: 1.5px solid var(--accent); color: var(--accent); }
+.wtabs button.on { background: var(--accent); color: #fff; }
+.wchart { width: 100%; height: auto; margin: 6px 0; font-family: Markazi, serif; }
+.wchart .wv { font-size: 14px; font-weight: 700; fill: #333; } .wchart .wd { font-size: 13px; fill: #555; }
+.wchart .wm { font-size: 11px; fill: #888; } .wchart .wt { font-size: 12px; fill: #B08A3E; }
+.wopts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.wopts button { background: #fff; border: 1.5px solid #d8e2e7; border-radius: 12px; padding: 10px; font-size: 22px; color: var(--accent); font-weight: 600; text-align: center; }
+.wopts small { display: block; font-size: 16px; color: var(--muted); font-weight: 400; }

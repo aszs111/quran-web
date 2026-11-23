@@ -330,6 +330,146 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 document.addEventListener('pointerdown', () => { if (!wakeLock) keepAwake(); }, { passive: true });
 keepAwake();
 
+// ======================= الورد: ختمة بمدة يحددها القارئ، ومتابعة القراءة، وتقارير =======================
+// الصفحة تُحسب مقروءة إذا بقيت في وسط الشاشة ٢٠ ثانية أو أكثر (مجموعة في اليوم)، والوقت يُحسب إذا كان القارئ نشطًا
+const WIRD_READ_SECS = 20, TICK = 5;
+const W = {
+  plan: store.get('wirdPlan', null),      // {start:'YYYY-MM-DD', days:N, from:p, done:0}
+  log: store.get('wirdLog', {}),          // {'YYYY-MM-DD': {secs:n, pages:{p:secs}}}
+  khatmas: store.get('wirdKhatmas', 0),
+  lastAct: 0,
+};
+const today = (d = new Date()) => { const z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`; };
+const dayAdd = (iso, k) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + k); return today(d); };
+const dayDiff = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
+const niceDate = iso => { const d = new Date(iso + 'T12:00:00'); return `${DAYNAMES[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`; };
+const DAYNAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+function wirdSave() { store.set('wirdPlan', W.plan); store.set('wirdLog', W.log); store.set('wirdKhatmas', W.khatmas); }
+['scroll', 'pointerdown'].forEach(ev => document.addEventListener(ev, () => { W.lastAct = Date.now(); }, { passive: true, capture: true }));
+
+function currentLayoutPage() {
+  if (mode === 'text') { const ta = textAyahAtCenter(); return ta ? D.ayahPage.get(ta.dataset.a) : 0; }
+  return Math.floor(currentPos()) + 1;
+}
+setInterval(() => {
+  if (!D || document.visibilityState !== 'visible' || !sheet.hidden) return;
+  const active = auto.running || Date.now() - W.lastAct < 90000;
+  if (!active) return;
+  const p = currentLayoutPage(); if (!p) return;
+  const t = today(); const L0 = W.log[t] ||= { secs: 0, pages: {} };
+  L0.secs += TICK; L0.pages[p] = (L0.pages[p] || 0) + TICK;
+  // تقليم السجل: نبقي ١٢٠ يومًا
+  const keys = Object.keys(W.log).sort(); while (keys.length > 120) delete W.log[keys.shift()];
+  wirdSave();
+}, TICK * 1000);
+
+// إحصاءات الخطة
+function wirdStats() {
+  const P = W.plan; if (!P) return null;
+  const first = new Map(); // الصفحة -> أول يوم قُرئت فيه ضمن الخطة
+  for (const d of Object.keys(W.log).sort()) {
+    if (d < P.start) continue;
+    for (const [p, secs] of Object.entries(W.log[d].pages)) if (secs >= WIRD_READ_SECS && !first.has(+p)) first.set(+p, d);
+  }
+  const t = today(), dayN = dayDiff(P.start, t) + 1;
+  const target = Math.ceil(604 / P.days), read = first.size;
+  const perDay = d => [...first.values()].filter(x => x === d).length;
+  const secsOf = d => (W.log[d] && d >= P.start) ? W.log[d].secs : 0;
+  let next = 0; for (let k = 0; k < 604; k++) { const p = ((P.from - 1 + k) % 604) + 1; if (!first.has(p)) { next = p; break; } }
+  const expected = Math.min(604, target * Math.min(dayN, P.days));
+  return { P, first, t, dayN, target, read, perDay, secsOf, next, expected, end: dayAdd(P.start, P.days - 1) };
+}
+
+function barChart(days, st, title) {
+  // رسم أعمدة: الصفحات المقروءة لكل يوم، وخط متقطع للهدف اليومي
+  const vals = days.map(d => st.perDay(d)), max = Math.max(st.target, ...vals, 1);
+  const W0 = 340, H0 = 170, padB = 34, padT = 14, bw = Math.min(46, (W0 - 20) / days.length - 10);
+  const step = (W0 - 20) / days.length, y = v => padT + (H0 - padB - padT) * (1 - v / max);
+  let g = `<svg viewBox="0 0 ${W0} ${H0}" class="wchart" role="img" aria-label="${title}">`;
+  days.forEach((d, i) => {
+    const x = W0 - 10 - step * (i + 0.5) - bw / 2, v = vals[i], ok = v >= st.target;
+    g += `<rect x="${x}" y="${y(v)}" width="${bw}" height="${H0 - padB - y(v)}" rx="5" fill="${ok ? '#2F8A6E' : '#C2564C'}" opacity="${d === st.t ? 1 : .8}"/>`;
+    g += `<text x="${x + bw / 2}" y="${y(v) - 4}" text-anchor="middle" class="wv">${v}</text>`;
+    g += `<text x="${x + bw / 2}" y="${H0 - 18}" text-anchor="middle" class="wd">${d === st.t ? 'اليوم' : DAYNAMES[new Date(d + 'T12:00:00').getDay()]}</text>`;
+    g += `<text x="${x + bw / 2}" y="${H0 - 4}" text-anchor="middle" class="wm">${Math.round(st.secsOf(d) / 60)} د</text>`;
+  });
+  g += `<line x1="8" x2="${W0 - 8}" y1="${y(st.target)}" y2="${y(st.target)}" stroke="#B08A3E" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+  g += `<text x="34" y="${y(st.target) - 5}" text-anchor="middle" class="wt">الهدف ${st.target}</text></svg>`;
+  return g;
+}
+
+function showWird(tab = 'day') {
+  sheet.style.height = '88vh';
+  if (!W.plan) return wirdSetup();
+  const st = wirdStats();
+  if (st.read >= 604) {
+    openSheet(`<div class="title" style="text-align:center">ختمت القرآن الكريم</div>
+      <div class="body" style="flex:none;text-align:center;margin:14px 0">تقبّل الله منك. أتممت ختمتك في ${AR(st.dayN)} يومًا.</div>
+      <div class="row" style="justify-content:center"><button class="tb fill" id="wNew">ختمة جديدة</button></div>`);
+    if (!W.plan.done) { W.plan.done = 1; W.khatmas++; wirdSave(); }
+    $('#wNew').onclick = () => { W.plan = null; wirdSave(); showWird(); };
+    return;
+  }
+  const pct = Math.round(st.read / 604 * 100), diff = st.read - st.expected;
+  const todayRead = st.perDay(st.t), remainToday = Math.max(0, st.target - todayRead);
+  const toP = Math.min(604, st.next + remainToday - 1);
+  const ranges = { day: 7, three: 3, week: 7 };
+  const days = Array.from({ length: ranges[tab] }, (_, i) => dayAdd(st.t, -i)).filter(d => d >= st.P.start);
+  const sum = days.reduce((a, d) => a + st.perDay(d), 0), mins = Math.round(days.reduce((a, d) => a + st.secsOf(d), 0) / 60);
+  const avg = days.length ? sum / days.length : 0;
+  const finish = avg > 0 ? dayAdd(st.t, Math.ceil((604 - st.read) / avg)) : null;
+  let report = '';
+  if (tab === 'day') report = `<div class="wrow"><b>اليوم:</b> ${AR(todayRead)} من ${AR(st.target)} صفحة · ${AR(Math.round(st.secsOf(st.t) / 60))} دقيقة</div>`;
+  else report = `<div class="wrow"><b>${tab === 'three' ? 'آخر ٣ أيام' : 'آخر أسبوع'}:</b> ${AR(sum)} صفحة من ${AR(st.target * days.length)} · ${AR(mins)} دقيقة · المعدل ${AR(Math.round(avg * 10) / 10)} صفحة يوميًّا</div>
+    ${finish ? `<div class="wrow">بهذا المعدل تختم ${niceDate(finish)}${finish <= st.end ? ' <span class="ok">✓ في موعدك</span>' : ' <span class="late">— بعد موعدك (' + niceDate(st.end) + ')</span>'}</div>` : ''}`;
+  openSheet(`
+    <div class="small">الورد · ختمة في ${AR(st.P.days)} ${st.P.days <= 10 ? 'أيام' : 'يومًا'} · اليوم ${AR(Math.min(st.dayN, st.P.days))} من ${AR(st.P.days)}</div>
+    <div class="wbar"><div style="width:${pct}%"></div></div>
+    <div class="wrow"><b>${AR(st.read)}</b> صفحة من ٦٠٤ (${AR(pct)}٪) · ${diff >= 0 ? `<span class="ok">متقدم ${AR(diff)} صفحة</span>` : `<span class="late">متأخر ${AR(-diff)} صفحة</span>`}</div>
+    <button class="bmrow" id="wGo">وردك اليوم: ${remainToday ? `من صفحة ${st.next} إلى ${toP}` : 'أتممته، بارك الله فيك'} ← ابدأ القراءة</button>
+    <div class="wtabs">
+      <button data-t="day" class="${tab === 'day' ? 'on' : ''}">يومي</button>
+      <button data-t="three" class="${tab === 'three' ? 'on' : ''}">٣ أيام</button>
+      <button data-t="week" class="${tab === 'week' ? 'on' : ''}">أسبوعي</button>
+    </div>
+    ${report}
+    ${barChart(days, st, 'الصفحات المقروءة')}
+    <div class="small" style="text-align:center">الأخضر: بلغ الهدف · الأحمر: دونه · الخط المتقطع: الهدف اليومي</div>
+    <div class="row"><button class="tbtn" id="wEdit">تعديل الورد</button><button class="tbtn" id="wEnd">إنهاء الورد</button></div>`);
+  sheet.querySelector('.wtabs').onclick = e => { const b = e.target.closest('button'); if (b) showWird(b.dataset.t); };
+  $('#wGo').onclick = () => { closeAll(); const [s, a] = lineRef(st.next, 0); goToAyah(s, a); };
+  $('#wEdit').onclick = () => wirdSetup(true);
+  $('#wEnd').onclick = () => { if (confirm('إنهاء الورد الحالي؟ يبقى سجل قراءتك محفوظًا.')) { W.plan = null; wirdSave(); showWird(); } };
+}
+
+function wirdSetup(edit = false) {
+  sheet.style.height = '';
+  const cur = currentLayoutPage() || 1;
+  openSheet(`<div class="title">${edit ? 'تعديل الورد' : 'الورد: ختمة جديدة'}</div>
+    <div class="small" style="margin:6px 0">متى تريد أن تختم القرآن؟</div>
+    <div class="wopts">
+      <button data-d="3">كل ٣ أيام<small>٢٠٢ صفحة يوميًّا</small></button>
+      <button data-d="7">كل أسبوع<small>٨٧ صفحة يوميًّا</small></button>
+      <button data-d="30">كل شهر<small>٢١ صفحة يوميًّا</small></button>
+      <button data-d="0">مدة أخرى<small><input id="wDays" class="inp" inputmode="numeric" placeholder="عدد الأيام" style="margin-top:4px;font-size:20px;padding:4px"></small></button>
+    </div>
+    <div class="small" style="margin:10px 0 4px">من أين تبدأ؟</div>
+    <label class="chk"><input type="radio" name="wfrom" value="1" ${edit ? '' : 'checked'}>من أول المصحف</label>
+    <label class="chk"><input type="radio" name="wfrom" value="${cur}">من موضعي الحالي (صفحة ${cur})</label>
+    ${edit ? `<label class="chk"><input type="radio" name="wfrom" value="keep" checked>أبقِ التقدم الحالي وغيّر المدة فقط</label>` : ''}`);
+  sheet.querySelector('.wopts').onclick = e => {
+    const b = e.target.closest('button'); if (!b || e.target.id === 'wDays') return;
+    let d = +b.dataset.d; if (!d) d = parseInt(($('#wDays').value || '').replace(/[٠-٩]/g, c => '٠١٢٣٤٥٦٧٨٩'.indexOf(c)), 10);
+    if (!(d >= 1 && d <= 3650)) { toast('اكتب عدد الأيام'); $('#wDays').focus(); return; }
+    const from = sheet.querySelector('input[name=wfrom]:checked').value;
+    if (from === 'keep' && W.plan) W.plan.days = d;
+    else W.plan = { start: today(), days: d, from: +from, done: 0 };
+    wirdSave(); showWird();
+  };
+  const wd = $('#wDays'); wd.onclick = e => e.stopPropagation();
+  wd.onkeydown = e => { if (e.key === 'Enter') wd.closest('button').click(); };
+}
+
 // ======================= التمرير التلقائي =======================
 const auto = { shown: false, running: false, speed: store.get('speed', 4), acc: 0, last: 0 };
 const autoEl = $('#auto');
@@ -470,6 +610,7 @@ $('#menu').addEventListener('click', e => {
   if (b.dataset.act === 'tafsir') showTafsir(...selected);
   if (b.dataset.act === 'recite') showAudio(...selected);
   if (b.dataset.act === 'copy') showCopy(...selected);
+  if (b.dataset.act === 'wird') { setSelected(null); showWird(); }
 });
 const ayahTitle = (s, a) => `سورة ${D.surahs[s - 1]} – الآية ${AR(a)}`;
 
@@ -681,6 +822,7 @@ const TIPS = [
   'انقر نقرتين على أي كلمة ليظهر معناها من كتاب «السراج في بيان غريب القرآن» للخضيري.',
   'اضغط ضغطة مطوّلة على رقم الآية لتضع علامة الوقوف، فتتلوّن الآية وتعرف أين انتهيت. والضغطة نفسها تزيلها.',
   'انقر اسم السورة أعلى الشاشة لفهرس السور، وفيه الانتقال إلى علامة الوقوف وإعادة عرض التلميحات، ورقم الصفحة للانتقال إلى صفحة، والجزء لقائمة الأجزاء.',
+  'الورد: اضغط ضغطة مطوّلة على أي آية واختر «الورد»، فتحدد مدة ختمتك، ويتابع التطبيق قراءتك ويعطيك تقارير يومية وكل ٣ أيام وأسبوعية.',
   'اضغط رمز العدسة أعلى الشاشة للبحث في القرآن بكلمة أو عبارة، ثم اختر النتيجة لتنتقل إلى الآية.',
   'من قائمة المتصفح اختر «إضافة إلى الشاشة الرئيسية» ليظهر المصحف بأيقونة مثل التطبيق، ويعمل بلا إنترنت فيما قرأته.',
 ];
