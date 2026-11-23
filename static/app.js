@@ -318,6 +318,18 @@ function zoomKeepingCenter(v) {
   if (ta) tscroller.scrollTop += (ta.getBoundingClientRect().top - r.top) - before;
 }
 
+// ======================= إبقاء الشاشة مضاءة أثناء القراءة =======================
+// Screen Wake Lock: يدعمه Chrome على الأندرويد وSafari على الآيفون (iOS 16.4 فما بعده)؛ يُطلب من جديد عند العودة للتطبيق
+let wakeLock = null;
+async function keepAwake() {
+  if (!('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+  try { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } catch {}
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !wakeLock) keepAwake(); });
+// بعض المتصفحات لا تقبل الطلب إلا بعد لمسة من المستخدم
+document.addEventListener('pointerdown', () => { if (!wakeLock) keepAwake(); }, { passive: true });
+keepAwake();
+
 // ======================= التمرير التلقائي =======================
 const auto = { shown: false, running: false, speed: store.get('speed', 4), acc: 0, last: 0 };
 const autoEl = $('#auto');
