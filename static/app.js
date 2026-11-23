@@ -330,8 +330,14 @@ function enterFull() {
   try { (el.requestFullscreen || el.webkitRequestFullscreen).call(el, { navigationUI: 'hide' })?.catch?.(() => {}); } catch {}
 }
 function exitFull() { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch {} }
+// يُطلب تلقائيًا مرة واحدة في كل فتح؛ فإن خرج منه المستخدم لا نعيده إلا في الفتح القادم
+// (حتى لا يتكرر تنبيه Chrome «للخروج من ملء الشاشة…» مع كل لمسة)
+let fullUsed = false;
+const onFullChange = () => { if (inFull()) fullUsed = true; };
+document.addEventListener('fullscreenchange', onFullChange);
+document.addEventListener('webkitfullscreenchange', onFullChange);
 document.addEventListener('pointerup', () => {
-  if (store.get('fullscreen', true) && !isStandalone() && canFull() && !inFull()) enterFull();
+  if (!fullUsed && store.get('fullscreen', true) && !isStandalone() && canFull() && !inFull()) enterFull();
 }, { capture: true, passive: true });
 
 // ======================= إبقاء الشاشة مضاءة أثناء القراءة =======================
