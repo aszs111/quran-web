@@ -108,6 +108,14 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 #toast { position: fixed; z-index: 30; left: 50%; bottom: 80px; transform: translateX(-50%); background: rgba(30,30,30,.88); color: #fff;
   font-size: 19px; padding: 8px 16px; border-radius: 20px; white-space: nowrap; }
 #toast[hidden] { display: none; }
+/* بطاقة علامة الوقوف عند الفتح */
+#bmCard { position: fixed; z-index: 9; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(78vw, 340px);
+  background: #FBF6EC; border: 2px solid #C9A44C; border-radius: 24px; padding: 16px 18px 18px; box-shadow: 0 8px 28px rgba(0,0,0,.22);
+  color: #5C1F28; text-align: center; }
+.bm-head { font-size: 24px; color: #B07A12; font-weight: 600; }
+.bm-line { font-size: 32px; color: #7A2430; font-weight: 700; margin: 4px 0; }
+.bm-info { display: flex; justify-content: center; gap: 22px; font-size: 23px; margin-bottom: 14px; }
+#bmCard .tb { width: 100%; }
 /* بطاقة التلميحات */
 #tip { position: fixed; z-index: 9; left: 14px; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 70px); max-width: 560px; margin: 0 auto;
   background: #FBF6EC; border: 2px solid #C9A44C; border-radius: 24px; padding: 14px 18px 16px; box-shadow: 0 8px 28px rgba(0,0,0,.22); color: #5C1F28; }

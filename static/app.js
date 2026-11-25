@@ -66,7 +66,7 @@ async function boot() {
     lastHeader = ''; requestAnimationFrame(() => requestAnimationFrame(updateTextHeader));
     setTimeout(() => { lastHeader = ''; updateTextHeader(); }, 2200);
   }
-  if (!store.get('hideTips', false)) showTips();
+  if (bookmark) showBmCard(); else if (!store.get('hideTips', false)) showTips();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
@@ -825,6 +825,27 @@ function showAudio(s, a) {
   };
   $('#aCont').onchange = e => { A.cont = e.target.checked; store.set('continuous', A.cont); };
 }
+
+// ---------- بطاقة علامة الوقوف عند الفتح ----------
+function showBmCard() {
+  const [s, a] = bookmark;
+  const el = document.createElement('div'); el.id = 'bmCard';
+  el.innerHTML = `<div class="bm-head">◆ علامة الوقوف</div>
+    <div class="bm-line">سورة ${D.surahs[s - 1]}</div>
+    <div class="bm-info"><span>الآية ${AR(a)}</span><span>صفحة ${D.ayahPage.get(s + ':' + a)}</span></div>
+    <button class="tb fill" id="bmGo">انتقل إليها</button>`;
+  document.body.appendChild(el);
+  $('#bmGo').onclick = () => { closeBmCard(); goToAyah(s, a, true); };
+}
+function closeBmCard() {
+  const el = $('#bmCard'); if (!el) return;
+  el.remove(); tipClosedAt = performance.now();
+  if (!store.get('hideTips', false)) setTimeout(showTips, 300);
+}
+// النقر خارج البطاقة يخفيها
+document.addEventListener('pointerdown', e => {
+  const el = $('#bmCard'); if (el && !el.contains(e.target)) closeBmCard();
+}, true);
 
 // ---------- التلميحات: بطاقة واحدة لكل تلميح ----------
 let tipClosedAt = 0;
