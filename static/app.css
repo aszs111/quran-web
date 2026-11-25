@@ -196,3 +196,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .repRow span { margin-left: 4px; white-space: nowrap; }
 .rep { flex: 1; min-width: 0; height: 34px; padding: 0 4px; border-radius: 17px; border: 1.5px solid var(--accent); color: var(--accent); font-size: 19px; background: transparent; }
 .rep.on { background: var(--accent); color: #fff; }
+/* الوضع العرضي للجوال: البطاقتان جنبًا إلى جنب وبحجم أصغر */
+@media (orientation: landscape) and (max-height: 560px) {
+  #startWrap { flex-direction: row; align-items: stretch; width: min(92vw, 720px); gap: 14px; }
+  #startWrap .scard { flex: 1; min-width: 0; padding: 10px 14px 12px; display: flex; flex-direction: column; justify-content: center; }
+  .bm-head { font-size: 21px; } .bm-line { font-size: 27px; margin: 2px 0; } .bm-info { font-size: 20px; margin-bottom: 8px; }
+  #wCard .wchart { max-height: 52vh; }
+}
