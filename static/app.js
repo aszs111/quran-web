@@ -27,7 +27,7 @@ const juzOf = (s, a) => { let j = 1; JUZ.forEach(([js, ja], i) => { if (s > js |
 const RECITERS = [
   ['مشاري راشد العفاسي', 'Alafasy_128kbps'], ['عبد الرحمن السديس', 'Abdurrahmaan_As-Sudais_192kbps'],
   ['سعود الشريم', 'Saood_ash-Shuraym_128kbps'], ['ماهر المعيقلي', 'Maher_AlMuaiqly_64kbps'],
-  ['ياسر الدوسري', 'Yasser_Ad-Dussary_128kbps'], ['محمود خليل الحصري', 'Husary_64kbps'],
+  ['ياسر الدوسري', 'Yasser_Ad-Dussary_128kbps'], ['محمد أيوب', 'Muhammad_Ayyoub_128kbps'], ['محمود خليل الحصري', 'Husary_64kbps'],
   ['محمد صديق المنشاوي (مرتل)', 'Minshawy_Murattal_128kbps'], ['عبد الباسط عبد الصمد (مرتل)', 'Abdul_Basit_Murattal_64kbps'],
   ['سعد الغامدي', 'Ghamadi_40kbps'], ['أبو بكر الشاطري', 'Abu_Bakr_Ash-Shaatree_128kbps'],
   ['هاني الرفاعي', 'Hani_Rifai_192kbps'], ['محمد الطبلاوي', 'Mohammad_al_Tablaway_128kbps'],
@@ -66,7 +66,7 @@ async function boot() {
     lastHeader = ''; requestAnimationFrame(() => requestAnimationFrame(updateTextHeader));
     setTimeout(() => { lastHeader = ''; updateTextHeader(); }, 2200);
   }
-  if (bookmark || W.plan) showStartCards(); else if (!store.get('hideTips', false)) showTips();
+  showStartCards();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
@@ -646,6 +646,7 @@ $('#menu').addEventListener('click', e => {
   if (b.dataset.act === 'recite') showAudio(...selected);
   if (b.dataset.act === 'copy') showCopy(...selected);
   if (b.dataset.act === 'wird') { setSelected(null); showWird(); }
+  if (b.dataset.act === 'tadabbur') { const p = D.ayahPage.get(selected.join(':')); setSelected(null); showTadabbur(p); }
 });
 const ayahTitle = (s, a) => `سورة ${D.surahs[s - 1]} – الآية ${AR(a)}`;
 
@@ -865,8 +866,13 @@ function showStartCards() {
       <div class="bm-info"><span>اليوم ${AR(todayRead)} من ${AR(st.target)} صفحة</span></div>
       ${barChart(days, st, 'متابعة الورد', true)}</button>`);
   }
-  if (!el.children.length) return;
+  el.insertAdjacentHTML('beforeend', `<button class="scard" id="tdCard"><div class="bm-head">تدبرات</div>
+    <div class="td-feat" id="tdFeat">…</div><div class="td-more">صفحة <span id="tdPage"></span> · اضغط لقراءة كل تدبرات الصفحة</div></button>`);
   document.body.appendChild(el);
+  const tp = currentLayoutPage() || 1;
+  $('#tdPage').textContent = tp;
+  tadabbur().then(T => { const f = $('#tdFeat'); if (f) f.textContent = T.pages[tp - 1].f; }).catch(() => {});
+  $('#tdCard').onclick = () => showTadabbur(tp);
   if ($('#bmGo')) $('#bmGo').onclick = () => { closeStartCards(); goToAyah(...bookmark, true); };
   if ($('#wCard')) $('#wCard').onclick = () => showWird(); // تبقى البطاقتان بعد الرجوع من الورد
 }
@@ -880,6 +886,35 @@ document.addEventListener('pointerdown', e => {
   const el = $('#startWrap');
   if (el && sheet.hidden && !el.contains(e.target)) closeStartCards();
 }, true);
+
+// ---------- تدبرات الصفحة (من فوائد «المختصر في تفسير القرآن الكريم») ----------
+const tadabbur = () => json('data/tadabbur.json');
+async function showTadabbur(p) {
+  if (!p) return;
+  const T = await tadabbur(), pg = T.pages[p - 1];
+  const tl = D.pages[p - 1].find(l => l[0] === 't'), sName = D.surahs[(tl ? tl[1][0][0] : 1) - 1];
+  sheet.style.height = '';
+  openSheet(`<div class="small">تدبرات الصفحة</div>
+    <div class="title">صفحة ${p} – سورة ${sName}</div><div class="hr"></div>
+    <div class="body td-list">${pg.r.map(t => `<p>${esc(t)}</p>`).join('')}</div>
+    <div class="td-src">المصدر: ${esc(T.src)}</div>
+    <div class="row"><button class="tbtn" id="tdPrev" ${p > 1 ? '' : 'disabled'}>الصفحة السابقة</button>
+      <button class="tbtn" id="tdGo">اذهب إلى الصفحة</button>
+      <button class="tbtn" id="tdNext" ${p < 604 ? '' : 'disabled'}>الصفحة التالية</button></div>`);
+  $('#tdPrev').onclick = () => showTadabbur(p - 1);
+  $('#tdNext').onclick = () => showTadabbur(p + 1);
+  $('#tdGo').onclick = () => { closeAll(); closeStartCards(); goToPageAny(p); };
+}
+// السحب أفقيًّا على صفحة المصحف (يمينًا أو يسارًا) يفتح تدبرات الصفحة الحاضرة
+[scroller, tscroller].forEach(el => {
+  let sx = 0, sy = 0, st = 0, multi = false;
+  el.addEventListener('touchstart', e => { multi = e.touches.length > 1; if (multi) return; sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now(); }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (multi || e.touches.length || !sheet.hidden) return;
+    const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Date.now() - st < 700 && Math.abs(dx) > 90 && Math.abs(dx) > 2.5 * Math.abs(dy)) showTadabbur(currentLayoutPage());
+  }, { passive: true });
+});
 
 // ---------- التلميحات: بطاقة واحدة لكل تلميح ----------
 let tipClosedAt = 0;
@@ -907,6 +942,7 @@ const TIPS = [
   'عند كل فتح تظهر بطاقة علامة الوقوف، و«انتقل إليها» يأخذك إليها. وتحتها بطاقة الورد اليومي، اضغطها لتفتح متابعة الورد. والنقر خارج البطاقتين يخفيهما.',
   'في رسم الورد: الأحمر دون ثلثي هدفك اليومي، والبرتقالي ثلثاه، والأخضر الهدف كاملًا. وإذا أتممت ورد اليوم ظهر لك تاج يومض.',
   'تبقى الشاشة مضاءة ما دمت تقرأ في المصحف.',
+  'تدبرات: اسحب إصبعك على الصفحة أفقيًّا (يمينًا أو يسارًا) لتظهر تدبرات الصفحة التي تقرؤها، أو اختر «تدبرات» من الضغطة المطوّلة على الآية. وتظهر لك بطاقة تدبرات عند كل فتح.',
   'من قائمة المتصفح اختر «إضافة إلى الشاشة الرئيسية» ليظهر المصحف بأيقونة مثل التطبيق، ويعمل بلا إنترنت فيما قرأته.',
 ];
 let tipIdx = store.get('tipIdx', 0) % TIPS.length;
