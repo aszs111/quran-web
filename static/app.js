@@ -66,7 +66,7 @@ async function boot() {
     lastHeader = ''; requestAnimationFrame(() => requestAnimationFrame(updateTextHeader));
     setTimeout(() => { lastHeader = ''; updateTextHeader(); }, 2200);
   }
-  if (bookmark) showBmCard(); else if (!store.get('hideTips', false)) showTips();
+  if (bookmark || W.plan) showStartCards(); else if (!store.get('hideTips', false)) showTips();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
@@ -371,11 +371,28 @@ setInterval(() => {
   if (!active) return;
   const p = currentLayoutPage(); if (!p) return;
   const t = today(); const L0 = W.log[t] ||= { secs: 0, pages: {} };
-  L0.secs += TICK; L0.pages[p] = (L0.pages[p] || 0) + TICK;
+  const before = L0.pages[p] || 0;
+  L0.secs += TICK; L0.pages[p] = before + TICK;
+  if (before < WIRD_READ_SECS && L0.pages[p] >= WIRD_READ_SECS) checkCrown();
   // تقليم السجل: نبقي ١٢٠ يومًا
   const keys = Object.keys(W.log).sort(); while (keys.length > 120) delete W.log[keys.shift()];
   wirdSave();
 }, TICK * 1000);
+
+// تاج يومض ثانيتين ونصفًا عند إتمام الهدف اليومي (مرة في اليوم)
+function checkCrown() {
+  const st = wirdStats(); if (!st || store.get('crownDay', '') === st.t || st.perDay(st.t) < st.target) return;
+  store.set('crownDay', st.t);
+  const el = document.createElement('div'); el.id = 'crown';
+  el.innerHTML = `<svg viewBox="0 0 120 100"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE58A"/><stop offset="1" stop-color="#D9A21E"/></linearGradient></defs>
+    <path d="M12 78 L6 26 L36 50 L60 12 L84 50 L114 26 L108 78 Z" fill="url(#cg)" stroke="#A9750C" stroke-width="3" stroke-linejoin="round"/>
+    <rect x="12" y="78" width="96" height="14" rx="4" fill="url(#cg)" stroke="#A9750C" stroke-width="3"/>
+    <circle cx="6" cy="24" r="6" fill="#E9483B"/><circle cx="60" cy="10" r="7" fill="#2F8A6E"/><circle cx="114" cy="24" r="6" fill="#E9483B"/>
+    <circle cx="36" cy="66" r="5" fill="#2F6FB5"/><circle cx="60" cy="62" r="6" fill="#E9483B"/><circle cx="84" cy="66" r="5" fill="#2F6FB5"/></svg>
+    <div>أتممت ورد اليوم</div>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
 
 // إحصاءات الخطة
 function wirdStats() {
@@ -394,19 +411,23 @@ function wirdStats() {
   return { P, first, t, dayN, target, read, perDay, secsOf, next, expected, end: dayAdd(P.start, P.days - 1) };
 }
 
-function barChart(days, st, title) {
+// لون الإنجاز اليومي: دون الثلثين أحمر، من الثلثين برتقالي، الهدف كاملًا أخضر
+const wirdColor = (v, target) => v >= target ? '#2F8A6E' : v >= target * 2 / 3 ? '#E08A2E' : '#C2564C';
+function barChart(days, st, title, mini = false) {
   // رسم أعمدة: الصفحات المقروءة لكل يوم، وخط متقطع للهدف اليومي
   const vals = days.map(d => st.perDay(d)), max = Math.max(st.target, ...vals, 1);
   const W0 = 340, H0 = 170, padB = 34, padT = 14, bw = Math.min(46, (W0 - 20) / days.length - 10);
   const step = (W0 - 20) / days.length, y = v => padT + (H0 - padB - padT) * (1 - v / max);
   let g = `<svg viewBox="0 0 ${W0} ${H0}" class="wchart" role="img" aria-label="${title}">`;
   days.forEach((d, i) => {
-    const x = W0 - 10 - step * (i + 0.5) - bw / 2, v = vals[i], ok = v >= st.target;
-    g += `<rect x="${x}" y="${y(v)}" width="${bw}" height="${H0 - padB - y(v)}" rx="5" fill="${ok ? '#2F8A6E' : '#C2564C'}" opacity="${d === st.t ? 1 : .8}"/>`;
+    const x = W0 - 10 - step * (i + 0.5) - bw / 2, v = vals[i];
+    g += `<rect x="${x}" y="${y(v)}" width="${bw}" height="${H0 - padB - y(v)}" rx="5" fill="${wirdColor(v, st.target)}" opacity="${d === st.t ? 1 : .85}"/>`;
     g += `<text x="${x + bw / 2}" y="${y(v) - 4}" text-anchor="middle" class="wv">${v}</text>`;
     g += `<text x="${x + bw / 2}" y="${H0 - 18}" text-anchor="middle" class="wd">${d === st.t ? 'اليوم' : DAYNAMES[new Date(d + 'T12:00:00').getDay()]}</text>`;
     g += `<text x="${x + bw / 2}" y="${H0 - 4}" text-anchor="middle" class="wm">${Math.round(st.secsOf(d) / 60)} د</text>`;
   });
+  // خطّا الثلث والثلثين، ثم خط الهدف
+  for (const f of [1 / 3, 2 / 3]) g += `<line x1="8" x2="${W0 - 8}" y1="${y(st.target * f)}" y2="${y(st.target * f)}" stroke="#C9B48A" stroke-width="1" stroke-dasharray="2 4"/>`;
   g += `<line x1="8" x2="${W0 - 8}" y1="${y(st.target)}" y2="${y(st.target)}" stroke="#B08A3E" stroke-width="1.5" stroke-dasharray="5 4"/>`;
   g += `<text x="34" y="${y(st.target) - 5}" text-anchor="middle" class="wt">الهدف ${st.target}</text></svg>`;
   return g;
@@ -448,7 +469,7 @@ function showWird(tab = 'day') {
     </div>
     ${report}
     ${barChart(days, st, 'الصفحات المقروءة')}
-    <div class="small" style="text-align:center">الأخضر: بلغ الهدف · الأحمر: دونه · الخط المتقطع: الهدف اليومي</div>
+    <div class="small" style="text-align:center">الأخضر: الهدف كاملًا · البرتقالي: ثلثاه · الأحمر: دون ذلك · الخط المتقطع: الهدف اليومي</div>
     <div class="row"><button class="tbtn" id="wEdit">تعديل الورد</button><button class="tbtn" id="wEnd">إنهاء الورد</button></div>`);
   sheet.querySelector('.wtabs').onclick = e => { const b = e.target.closest('button'); if (b) showWird(b.dataset.t); };
   $('#wGo').onclick = () => { closeAll(); const [s, a] = lineRef(st.next, 0); goToAyah(s, a); };
@@ -826,25 +847,38 @@ function showAudio(s, a) {
   $('#aCont').onchange = e => { A.cont = e.target.checked; store.set('continuous', A.cont); };
 }
 
-// ---------- بطاقة علامة الوقوف عند الفتح ----------
-function showBmCard() {
-  const [s, a] = bookmark;
-  const el = document.createElement('div'); el.id = 'bmCard';
-  el.innerHTML = `<div class="bm-head">◆ علامة الوقوف</div>
-    <div class="bm-line">سورة ${D.surahs[s - 1]}</div>
-    <div class="bm-info"><span>الآية ${AR(a)}</span><span>صفحة ${D.ayahPage.get(s + ':' + a)}</span></div>
-    <button class="tb fill" id="bmGo">انتقل إليها</button>`;
+// ---------- بطاقتا الفتح: علامة الوقوف، ومتابعة الورد ----------
+function showStartCards() {
+  const el = document.createElement('div'); el.id = 'startWrap';
+  if (bookmark) {
+    const [s, a] = bookmark;
+    el.insertAdjacentHTML('beforeend', `<div class="scard" id="bmCard"><div class="bm-head">◆ علامة الوقوف</div>
+      <div class="bm-line">سورة ${D.surahs[s - 1]}</div>
+      <div class="bm-info"><span>الآية ${AR(a)}</span><span>صفحة ${D.ayahPage.get(s + ':' + a)}</span></div>
+      <button class="tb fill" id="bmGo">انتقل إليها</button></div>`);
+  }
+  const st = wirdStats();
+  if (st && st.read < 604) {
+    const days = Array.from({ length: 7 }, (_, i) => dayAdd(st.t, -i)).filter(d => d >= st.P.start);
+    const todayRead = st.perDay(st.t);
+    el.insertAdjacentHTML('beforeend', `<button class="scard" id="wCard"><div class="bm-head">الورد اليومي</div>
+      <div class="bm-info"><span>اليوم ${AR(todayRead)} من ${AR(st.target)} صفحة</span></div>
+      ${barChart(days, st, 'متابعة الورد', true)}</button>`);
+  }
+  if (!el.children.length) return;
   document.body.appendChild(el);
-  $('#bmGo').onclick = () => { closeBmCard(); goToAyah(s, a, true); };
+  if ($('#bmGo')) $('#bmGo').onclick = () => { closeStartCards(); goToAyah(...bookmark, true); };
+  if ($('#wCard')) $('#wCard').onclick = () => showWird(); // تبقى البطاقتان بعد الرجوع من الورد
 }
-function closeBmCard() {
-  const el = $('#bmCard'); if (!el) return;
+function closeStartCards() {
+  const el = $('#startWrap'); if (!el) return;
   el.remove(); tipClosedAt = performance.now();
   if (!store.get('hideTips', false)) setTimeout(showTips, 300);
 }
-// النقر خارج البطاقة يخفيها
+// النقر خارج البطاقتين يخفيهما (لا أثناء فتح صفحة الورد)
 document.addEventListener('pointerdown', e => {
-  const el = $('#bmCard'); if (el && !el.contains(e.target)) closeBmCard();
+  const el = $('#startWrap');
+  if (el && sheet.hidden && !el.contains(e.target)) closeStartCards();
 }, true);
 
 // ---------- التلميحات: بطاقة واحدة لكل تلميح ----------
