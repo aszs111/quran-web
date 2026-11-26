@@ -637,7 +637,7 @@ function showExitPop(el, below = false) {
   exitTimer = setTimeout(hideExitPop, 5000);
 }
 function hideExitPop() { clearTimeout(exitTimer); $('#exitPop')?.remove(); }
-document.addEventListener('pointerdown', e => { if (e.target.id !== 'exitPop') hideExitPop(); }, true);
+document.addEventListener('pointerdown', e => { if (e.target.id !== 'exitPop' && e.target.id !== 'hPage') hideExitPop(); }, true);
 scroller.addEventListener('scroll', hideExitPop, { passive: true });
 tscroller.addEventListener('scroll', hideExitPop, { passive: true });
 function exitApp() {
@@ -1123,12 +1123,18 @@ function showVision() {
 }
 
 // ضغطة مطوّلة على رقم الصفحة في الأعلى: زر «خروج» تحته
+// (بأحداث اللمس مباشرة؛ لأن المتصفح في الجوال يلغي أحداث المؤشر عند الضغط المطوّل)
 {
   const hp = $('#hPage'); let t = 0, fired = false;
-  hp.addEventListener('pointerdown', () => { fired = false; t = setTimeout(() => { fired = true; showExitPop(hp, true); }, 550); });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => hp.addEventListener(ev, () => clearTimeout(t)));
+  const start = () => { fired = false; clearTimeout(t); t = setTimeout(() => { fired = true; showExitPop(hp, true); }, 550); };
+  const stop = () => clearTimeout(t);
+  hp.addEventListener('touchstart', start, { passive: true });
+  hp.addEventListener('touchend', e => { stop(); if (fired) e.preventDefault(); });
+  hp.addEventListener('touchmove', stop, { passive: true });
+  hp.addEventListener('touchcancel', stop);
+  hp.addEventListener('mousedown', start); hp.addEventListener('mouseup', stop); hp.addEventListener('mouseleave', stop);
   hp.addEventListener('contextmenu', e => e.preventDefault());
-  hp.addEventListener('click', e => { if (fired) { e.stopImmediatePropagation(); fired = false; } }, true);
+  hp.addEventListener('click', e => { if (fired) { e.stopImmediatePropagation(); e.preventDefault(); fired = false; } }, true);
 }
 
 // ---------- الفهارس ----------
