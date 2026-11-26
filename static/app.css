@@ -123,10 +123,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 #wCard { padding-bottom: 6px; } #wCard .wchart { margin: 0; }
 /* تاج إتمام الورد اليومي */
 #crown { position: fixed; z-index: 40; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;
-  animation: blink .5s ease-in-out 5 alternate; }
-#crown svg { width: 150px; filter: drop-shadow(0 4px 12px rgba(160,110,10,.5)); }
+  animation: blink .25s ease-in-out 12 alternate; }
+#crown img { width: 220px; display: block; margin: 0 auto 6px; }
 #crown div { font-size: 28px; font-weight: 700; color: #8A5A06; background: rgba(255,248,225,.9); border-radius: 14px; padding: 2px 14px; }
-@keyframes blink { from { opacity: 1; transform: translate(-50%, -50%) scale(1); } to { opacity: .15; transform: translate(-50%, -50%) scale(1.08); } }
+@keyframes blink { from { opacity: 1; filter: brightness(1.25) drop-shadow(0 0 22px rgba(255,200,40,.95)); transform: translate(-50%, -50%) scale(1.06); } to { opacity: .08; filter: none; transform: translate(-50%, -50%) scale(.96); } }
 /* بطاقة التلميحات */
 #tip { position: fixed; z-index: 9; left: 14px; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 70px); max-width: 560px; margin: 0 auto;
   background: #FBF6EC; border: 2px solid #C9A44C; border-radius: 24px; padding: 14px 18px 16px; box-shadow: 0 8px 28px rgba(0,0,0,.22); color: #5C1F28; }

@@ -384,14 +384,10 @@ function checkCrown() {
   const st = wirdStats(); if (!st || store.get('crownDay', '') === st.t || st.perDay(st.t) < st.target) return;
   store.set('crownDay', st.t);
   const el = document.createElement('div'); el.id = 'crown';
-  el.innerHTML = `<svg viewBox="0 0 120 100"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE58A"/><stop offset="1" stop-color="#D9A21E"/></linearGradient></defs>
-    <path d="M12 78 L6 26 L36 50 L60 12 L84 50 L114 26 L108 78 Z" fill="url(#cg)" stroke="#A9750C" stroke-width="3" stroke-linejoin="round"/>
-    <rect x="12" y="78" width="96" height="14" rx="4" fill="url(#cg)" stroke="#A9750C" stroke-width="3"/>
-    <circle cx="6" cy="24" r="6" fill="#E9483B"/><circle cx="60" cy="10" r="7" fill="#2F8A6E"/><circle cx="114" cy="24" r="6" fill="#E9483B"/>
-    <circle cx="36" cy="66" r="5" fill="#2F6FB5"/><circle cx="60" cy="62" r="6" fill="#E9483B"/><circle cx="84" cy="66" r="5" fill="#2F6FB5"/></svg>
+  el.innerHTML = `<img src="icons/crown.png" alt="تاج الوقار">
     <div>أتممت ورد اليوم</div>`;
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 2600);
+  setTimeout(() => el.remove(), 3000);
 }
 
 // إحصاءات الخطة
