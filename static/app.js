@@ -156,7 +156,7 @@ function pageHTML(p) {
 function renderPage(p) {
   if (rendered.has(p)) return;
   const el = document.createElement('div');
-  el.className = 'page';
+  el.className = 'page ' + (p % 2 ? 'odd' : 'even');   // الفردية يمنى والزوجية يسرى
   el.dataset.p = p;
   const fpx = L.fonts[p - 1];
   el.style.cssText = `top:${L.tops[p - 1]}px;height:${L.heights[p - 1]}px;font-family:p${p},bsml;font-size:${fpx}px;` +
@@ -236,7 +236,7 @@ async function buildText() {
   let h = '';
   pages.forEach((ays, pi) => {
     const p = pi + 1;
-    h += `<section class="tp" data-p="${p}"><p class="tx">`;
+    h += `<section class="tp ${p % 2 ? 'odd' : 'even'}" data-p="${p}"><p class="tx">`;
     for (const [s, a, j, t] of ays) {
       TX.ayahPage.set(s + ':' + a, p); TX.juz.set(s + ':' + a, j);
       if (a === 1) {
