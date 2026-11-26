@@ -626,12 +626,12 @@ function toggleBookmark(s, a, el) {
 }
 // زر «خروج» صغير فوق الآية بعد وضع علامة الوقوف
 let exitTimer = 0;
-function showExitPop(el) {
+function showExitPop(el, below = false) {
   hideExitPop();
   const r = el.getBoundingClientRect(), b = document.createElement('button');
   b.id = 'exitPop'; b.textContent = 'خروج';
   b.style.left = Math.max(8, Math.min(innerWidth - 88, r.left + r.width / 2 - 40)) + 'px';
-  b.style.top = Math.max(8, r.top - 50) + 'px';
+  b.style.top = (below ? r.bottom + 8 : Math.max(8, r.top - 50)) + 'px';
   b.onclick = e => { e.stopPropagation(); hideExitPop(); exitApp(); };
   document.body.appendChild(b);
   exitTimer = setTimeout(hideExitPop, 5000);
@@ -967,6 +967,7 @@ const TIPS = [
   'في رسم الورد: الأحمر دون ثلثي هدفك اليومي، والبرتقالي ثلثاه، والأخضر الهدف كاملًا. وإذا أتممت ورد اليوم ظهر لك تاج يومض.',
   'تبقى الشاشة مضاءة ما دمت تقرأ في المصحف.',
   'مقاس النظر: من فهرس السور اختر «👓 مقاس النظر» ورقم نظارتك (١ إلى ٣)، فيُعرض المصحف نصًّا بخط أكبر وأثقل يريح عينك.',
+  'للخروج السريع من أي شاشة: اضغط ضغطة مطوّلة على رقم الصفحة في الأعلى ثم «خروج» (إذا كان التطبيق مثبتًا على الشاشة الرئيسية).',
   'بعد وضع علامة الوقوف يظهر فوق الآية زر «خروج» صغير لبضع ثوانٍ، اضغطه لتغلق التطبيق (إذا كان مثبتًا على الشاشة الرئيسية).',
   'تدبرات: اسحب إصبعك على الصفحة أفقيًّا (يمينًا أو يسارًا) لتظهر تدبرات الصفحة التي تقرؤها، أو اختر «تدبرات» من الضغطة المطوّلة على الآية. وتظهر لك بطاقة تدبرات عند كل فتح.',
   'من قائمة المتصفح اختر «إضافة إلى الشاشة الرئيسية» ليظهر المصحف بأيقونة مثل التطبيق، ويعمل بلا إنترنت فيما قرأته.',
@@ -1119,6 +1120,15 @@ function showVision() {
     if (v && mode !== 'text') await setMode('text');
     toast(v ? `مقاس النظر ${visionLabel(v)}: خط أكبر وأثقل` : 'أُعيد الخط إلى حجمه المعتاد');
   };
+}
+
+// ضغطة مطوّلة على رقم الصفحة في الأعلى: زر «خروج» تحته
+{
+  const hp = $('#hPage'); let t = 0, fired = false;
+  hp.addEventListener('pointerdown', () => { fired = false; t = setTimeout(() => { fired = true; showExitPop(hp, true); }, 550); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => hp.addEventListener(ev, () => clearTimeout(t)));
+  hp.addEventListener('contextmenu', e => e.preventDefault());
+  hp.addEventListener('click', e => { if (fired) { e.stopImmediatePropagation(); fired = false; } }, true);
 }
 
 // ---------- الفهارس ----------
