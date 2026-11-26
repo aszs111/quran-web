@@ -161,15 +161,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 #tscroller { touch-action: pan-y; }
 #tpages { max-width: 900px; margin: 0 auto; padding: 4px 14px 120px; --tsize: 26px; }
 .tp { content-visibility: auto; contain-intrinsic-size: auto 1100px; position: relative; }
-/* سفطة الصفحة: حافة أوراق مكدسة على طول الصفحة من الجهة الخارجية —
-   الصفحة الفردية يمنى (السفطة يمينها والكعب يسارها)، والزوجية يسرى */
-.page::before, .tp::before { content: ""; position: absolute; top: 0; bottom: 0; width: 7px; pointer-events: none;
-  background: repeating-linear-gradient(90deg, rgba(140,110,60,.45) 0 1px, rgba(255,251,240,.95) 1px 2.2px); }
-.page.odd::before { right: 0; border-left: 1px solid rgba(140,110,60,.35); }
-.page.even::before { left: 0; border-right: 1px solid rgba(140,110,60,.35); }
-.tp.odd::before { right: -13px; border-left: 1px solid rgba(140,110,60,.35); }
-.tp.even::before { left: -13px; border-right: 1px solid rgba(140,110,60,.35); }
-/* ظل خفيف عند الكعب من الجهة الداخلية */
+/* ظل الكعب من الجهة الداخلية: الصفحة الفردية يمنى (كعبها يسارها)، والزوجية يسرى (كعبها يمينها) */
 .page.odd, .tp.odd { --sd: to right; } .page.even, .tp.even { --sd: to left; }
 .page, .tp { background: linear-gradient(var(--sd), rgba(55,38,12,.30) 0, rgba(55,38,12,.16) 12px, rgba(55,38,12,.07) 30px, rgba(55,38,12,.02) 52px, transparent 70px); }
 .tx { font-family: hafs, serif; font-size: var(--tsize); line-height: 2.15; text-align: justify; text-align-last: center; margin: 0; color: #000;
