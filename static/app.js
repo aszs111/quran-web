@@ -584,7 +584,7 @@ function ref(el) { return el.dataset.a.split(':').map(Number); }
 function onLongPress(el) {
   if (navigator.vibrate) navigator.vibrate(15);
   const [s, a] = ref(el);
-  if (el.classList.contains('m') || el.classList.contains('tm')) return toggleBookmark(s, a);
+  if (el.classList.contains('m') || el.classList.contains('tm')) return toggleBookmark(s, a, el);
   setSelected([s, a]);
   $('#menuTitle').textContent = `${D.surahs[s - 1]} – الآية ${AR(a)}`;
   $('#menu').hidden = false; $('#veil').hidden = false;
@@ -614,13 +614,36 @@ function setSelected(r) {
   selected = r;
   if (r && !isBm(...r)) forAyah(...r, e => { if (e.classList.contains('w') || e.classList.contains('ta')) e.classList.add('sel'); });
 }
-function toggleBookmark(s, a) {
+function toggleBookmark(s, a, el) {
   const same = isBm(s, a);
   if (bookmark) forAyah(...bookmark, e => e.classList.remove('bm'));
   bookmark = same ? null : [s, a];
   store.set('bookmark', bookmark);
   if (bookmark) forAyah(s, a, e => { e.classList.remove('sel'); e.classList.add('bm'); });
   toast(bookmark ? `وُضعت علامة الوقوف عند ${D.surahs[s - 1]} ${AR(a)}` : 'أُزيلت علامة الوقوف');
+  if (bookmark && el) showExitPop(el); else hideExitPop();
+}
+// زر «خروج» صغير فوق الآية بعد وضع علامة الوقوف
+let exitTimer = 0;
+function showExitPop(el) {
+  hideExitPop();
+  const r = el.getBoundingClientRect(), b = document.createElement('button');
+  b.id = 'exitPop'; b.textContent = 'خروج';
+  b.style.left = Math.max(8, Math.min(innerWidth - 88, r.left + r.width / 2 - 40)) + 'px';
+  b.style.top = Math.max(8, r.top - 50) + 'px';
+  b.onclick = e => { e.stopPropagation(); hideExitPop(); exitApp(); };
+  document.body.appendChild(b);
+  exitTimer = setTimeout(hideExitPop, 5000);
+}
+function hideExitPop() { clearTimeout(exitTimer); $('#exitPop')?.remove(); }
+document.addEventListener('pointerdown', e => { if (e.target.id !== 'exitPop') hideExitPop(); }, true);
+scroller.addEventListener('scroll', hideExitPop, { passive: true });
+tscroller.addEventListener('scroll', hideExitPop, { passive: true });
+function exitApp() {
+  // المتصفح يسمح بإغلاق النافذة إذا كان التطبيق مثبتًا أو فُتح في نافذة مستقلة
+  if (inFull()) exitFull();
+  window.close();
+  setTimeout(() => { if (!document.hidden) toast('أغلق الصفحة من المتصفح؛ لا يسمح المتصفح للموقع بإغلاق نفسه'); }, 400);
 }
 
 let toastTimer = 0;
@@ -942,6 +965,7 @@ const TIPS = [
   'عند كل فتح تظهر بطاقة علامة الوقوف، و«انتقل إليها» يأخذك إليها. وتحتها بطاقة الورد اليومي، اضغطها لتفتح متابعة الورد. والنقر خارج البطاقتين يخفيهما.',
   'في رسم الورد: الأحمر دون ثلثي هدفك اليومي، والبرتقالي ثلثاه، والأخضر الهدف كاملًا. وإذا أتممت ورد اليوم ظهر لك تاج يومض.',
   'تبقى الشاشة مضاءة ما دمت تقرأ في المصحف.',
+  'بعد وضع علامة الوقوف يظهر فوق الآية زر «خروج» صغير لبضع ثوانٍ، اضغطه لتغلق التطبيق (إذا كان مثبتًا على الشاشة الرئيسية).',
   'تدبرات: اسحب إصبعك على الصفحة أفقيًّا (يمينًا أو يسارًا) لتظهر تدبرات الصفحة التي تقرؤها، أو اختر «تدبرات» من الضغطة المطوّلة على الآية. وتظهر لك بطاقة تدبرات عند كل فتح.',
   'من قائمة المتصفح اختر «إضافة إلى الشاشة الرئيسية» ليظهر المصحف بأيقونة مثل التطبيق، ويعمل بلا إنترنت فيما قرأته.',
 ];
