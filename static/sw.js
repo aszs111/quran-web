@@ -27,7 +27,10 @@ self.addEventListener('fetch', e => {
     }));
   } else {
     // واجهة التطبيق: من الشبكة أولًا ليصل التحديث، ومن المحفوظ عند انقطاع الإنترنت
-    e.respondWith(fetch(e.request).then(r => {
+    // الصفحة نفسها تُطلب دائمًا من الخادم متجاوزةً ذاكرة المتصفح (وإلا بقيت النسخة القديمة عشر دقائق بعد النشر)
+    const page = e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/');
+    const req = page ? fetch(url.href, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(e.request);
+    e.respondWith(req.then(r => {
       if (r.ok) caches.open(SHELL).then(c => c.put(e.request, r.clone()));
       return r;
     }).catch(() => caches.match(e.request, { ignoreSearch: true })));
