@@ -170,8 +170,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .tp.odd::before { right: -13px; border-left: 1px solid rgba(140,110,60,.35); }
 .tp.even::before { left: -13px; border-right: 1px solid rgba(140,110,60,.35); }
 /* ظل خفيف عند الكعب من الجهة الداخلية */
-.page.odd { background: linear-gradient(to right, rgba(70,50,20,.07), transparent 26px); }
-.page.even { background: linear-gradient(to left, rgba(70,50,20,.07), transparent 26px); }
+.page.odd, .tp.odd { --sd: to right; } .page.even, .tp.even { --sd: to left; }
+.page, .tp { background: linear-gradient(var(--sd), rgba(55,38,12,.30) 0, rgba(55,38,12,.16) 12px, rgba(55,38,12,.07) 30px, rgba(55,38,12,.02) 52px, transparent 70px); }
 .tx { font-family: hafs, serif; font-size: var(--tsize); line-height: 2.15; text-align: justify; text-align-last: center; margin: 0; color: #000;
   -webkit-text-stroke: .012em #000; word-spacing: .05em; }
 .ta { border-radius: 6px; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
