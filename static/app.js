@@ -966,6 +966,7 @@ const TIPS = [
   'عند كل فتح تظهر بطاقة علامة الوقوف، و«انتقل إليها» يأخذك إليها. وتحتها بطاقة الورد اليومي، اضغطها لتفتح متابعة الورد. والنقر خارج البطاقتين يخفيهما.',
   'في رسم الورد: الأحمر دون ثلثي هدفك اليومي، والبرتقالي ثلثاه، والأخضر الهدف كاملًا. وإذا أتممت ورد اليوم ظهر لك تاج يومض.',
   'تبقى الشاشة مضاءة ما دمت تقرأ في المصحف.',
+  'مقاس النظر: من فهرس السور اختر «👓 مقاس النظر» ورقم نظارتك (١ إلى ٣)، فيُعرض المصحف نصًّا بخط أكبر وأثقل يريح عينك.',
   'بعد وضع علامة الوقوف يظهر فوق الآية زر «خروج» صغير لبضع ثوانٍ، اضغطه لتغلق التطبيق (إذا كان مثبتًا على الشاشة الرئيسية).',
   'تدبرات: اسحب إصبعك على الصفحة أفقيًّا (يمينًا أو يسارًا) لتظهر تدبرات الصفحة التي تقرؤها، أو اختر «تدبرات» من الضغطة المطوّلة على الآية. وتظهر لك بطاقة تدبرات عند كل فتح.',
   'من قائمة المتصفح اختر «إضافة إلى الشاشة الرئيسية» ليظهر المصحف بأيقونة مثل التطبيق، ويعمل بلا إنترنت فيما قرأته.',
@@ -1095,18 +1096,45 @@ $('#hSearch').onclick = () => {
   setTimeout(() => inp.focus(), 50);
 };
 
+// ---------- مقاس النظر: تهيئة القراءة لمن يحتاج نظارة قراءة ----------
+// لا تصحح الشاشة النظر، لكن الخط الأكبر والأثقل يريح العين ويسمح بإبعاد الجوال.
+// يكبر خط وضع النص ربعًا لكل درجة، ويثقل الحرف بحسب الدرجة.
+const VISION = [0, 1, 1.5, 2, 2.5, 2.75, 3], TBASE = 26;
+const visionLabel = v => v ? AR(String(v).replace('.', '٫')) : 'بلا';
+function applyVision(v, resize) {
+  document.documentElement.style.setProperty('--vstroke', (v * 0.011).toFixed(4) + 'em');
+  if (resize) tsize(Math.round(TBASE * (1 + 0.25 * v)));
+}
+applyVision(store.get('vision', 0), false);
+function showVision() {
+  const cur = store.get('vision', 0);
+  sheet.style.height = '';
+  openSheet(`<div class="title">مقاس النظر</div>
+    <div class="small">اختر مقاس نظارة القراءة، فيُعرض المصحف نصًّا بخط أكبر وأثقل يريح عينك. لا يغني عن النظارة، لكنه يجعل القراءة أريح بدونها، ويمكنك إبعاد الجوال قليلًا.</div>
+    <div class="vgrid">${VISION.map(v => `<button class="tbtn ${v === cur ? 'on' : ''}" data-v="${v}">${visionLabel(v)}</button>`).join('')}</div>`);
+  sheet.querySelector('.vgrid').onclick = async e => {
+    const b = e.target.closest('[data-v]'); if (!b) return;
+    const v = +b.dataset.v; store.set('vision', v); closeAll();
+    applyVision(v, true);
+    if (v && mode !== 'text') await setMode('text');
+    toast(v ? `مقاس النظر ${visionLabel(v)}: خط أكبر وأثقل` : 'أُعيد الخط إلى حجمه المعتاد');
+  };
+}
+
 // ---------- الفهارس ----------
 $('#hSurah').onclick = () => {
   sheet.style.height = '85vh';
   openSheet(`<div class="title">فهرس السور</div>
     ${bookmark ? `<button class="bmrow" id="goBm">◆ علامة الوقوف: ${ayahTitle(...bookmark)}</button>` : ''}
     <button class="bmrow" id="showTipsBtn" style="background:#FBF6EC;color:#7A2430">💡 عرض التلميحات</button>
+    <button class="bmrow" id="visionBtn" style="background:#EEF2F8;color:#2F4F7A">👓 مقاس النظر: ${visionLabel(store.get('vision', 0))}</button>
     ${canFull() && !isStandalone() ? `<button class="bmrow" id="fullBtn" style="background:#EAF3EF;color:var(--accent)">⛶ ${inFull() ? 'الخروج من ملء الشاشة' : 'ملء الشاشة دون شريط العنوان'}</button>` : ''}
     <div class="list">${D.surahs.map((n, i) => `<button class="item" data-s="${i + 1}" data-p="${D.surahPage[i + 1]}"><span class="n">${AR(i + 1)}</span>سورة ${n}<span class="p">ص ${AR(D.surahPage[i + 1])}</span></button>`).join('')}</div>`);
   if ($('#fullBtn')) $('#fullBtn').onclick = () => {
     const on = !inFull(); closeAll(); if (on) enterFull(); else exitFull();
   };
   $('#showTipsBtn').onclick = () => { store.set('hideTips', false); closeAll(); showTips(); };
+  $('#visionBtn').onclick = showVision;
   if (bookmark) $('#goBm').onclick = () => { closeAll(); goToAyah(...bookmark, true); };
   sheet.querySelector('.list').onclick = e => { const b = e.target.closest('.item'); if (b) { closeAll(); goToAyah(+b.dataset.s, 1); } };
 };
