@@ -470,10 +470,11 @@ function showWird(tab = 'day') {
     ${report}
     ${barChart(days, st, 'الصفحات المقروءة')}
     <div class="small" style="text-align:center">الأخضر: الهدف كاملًا · البرتقالي: ثلثاه · الأحمر: دون ذلك · الخط المتقطع: الهدف اليومي</div>
-    <div class="row"><button class="tbtn" id="wEdit">تعديل الورد</button><button class="tbtn" id="wEnd">إنهاء الورد</button></div>`);
+    <div class="row"><button class="tbtn" id="wEdit">تعديل الورد</button><button class="tbtn" id="wBack">رجوع</button><button class="tbtn" id="wEnd">إنهاء الورد</button></div>`);
   sheet.querySelector('.wtabs').onclick = e => { const b = e.target.closest('button'); if (b) showWird(b.dataset.t); };
   $('#wGo').onclick = () => { closeAll(); const [s, a] = lineRef(st.next, 0); goToAyah(s, a); };
   $('#wEdit').onclick = () => wirdSetup(true);
+  $('#wBack').onclick = () => closeAll();
   $('#wEnd').onclick = () => { if (confirm('إنهاء الورد الحالي؟ يبقى سجل قراءتك محفوظًا.')) { W.plan = null; wirdSave(); showWird(); } };
 }
 
