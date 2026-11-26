@@ -1,7 +1,7 @@
 // يحفظ ملفات المصحف في المتصفح ليعمل بلا إنترنت بعد أول فتح
 const VERSION = '__BUILD__';
 const SHELL = `shell-${VERSION}`, DATA = 'data-v1';
-const SHELL_FILES = ['./', 'index.html', 'app.css', 'app.js', 'manifest.webmanifest', 'fonts/markazi.woff2', 'fonts/bsml.ttf',
+const SHELL_FILES = ['./', 'index.html', 'app.css', 'app.js', 'manifest.webmanifest', 'fonts/markazi.woff2', 'fonts/bsml.ttf', 'icons/crown.png',
   'data/mushaf.json', 'data/text.json', 'fonts/hafs.woff2', 'data/surahs.json', 'data/ayah_counts.json', 'data/line_widths.json', 'data/page_stroke.json'];
 
 self.addEventListener('install', e => {
