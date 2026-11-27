@@ -42,15 +42,17 @@ def process(args):
     c = a[y0:bot - 10, x0:rig - 10]
     ink = (c.mean(2) < 110) & ((c.max(2) - c.min(2)) < 60)
     prof = np.convolve(ink.mean(1), np.ones(25) / 25, 'same'); h = len(prof)
-    cent = np.array([np.argmax(prof[int(k * h / 15):int((k + 1) * h / 15)]) + int(k * h / 15) for k in range(15)], float)
-    k = np.arange(15)
-    # خط مستقيم عبر المراكز مع إسقاط الشواذ (سطر قصير أو زخرفة)
-    for _ in range(3):
-        A = np.vstack([k, np.ones(15)]).T
-        pitch, c0 = np.linalg.lstsq(A, cent, rcond=None)[0]
-        res = cent - (c0 + pitch * k); bad = np.abs(res) > 18
-        if not bad.any(): break
-        cent[bad] = (c0 + pitch * k)[bad]
+    # شبكة الأسطر: 15 خانة متساوية؛ نبحث عن البداية والخطوة اللتين يقع عندهما أكبر قدر من الحبر
+    # على مراكز الخانات (أفضل من البحث سطرًا سطرًا، لأن عناوين السور زخرفة لا حبر فيها)
+    best = (-1, 0, 0)
+    for pitch in np.arange(0.062 * h, 0.07 * h, 0.5):
+        for c0 in np.arange(0.5 * pitch - 0.035 * h, 0.5 * pitch + 0.035 * h, 1.0):
+            idx = (c0 + pitch * np.arange(15)).astype(int)
+            if idx[-1] >= h or idx[0] < 0: continue
+            sc = prof[idx].sum()
+            if sc > best[0]: best = (sc, pitch, c0)
+    _, pitch, c0 = best
+    res = np.zeros(1)
     cols = np.where(ink.mean(0) > 0.002)[0]
     l, r = (cols[0], cols[-1]) if len(cols) else (0, c.shape[1] - 1)
     t = c0 - pitch / 2; b = c0 + pitch * 14.5
