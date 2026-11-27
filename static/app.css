@@ -228,3 +228,11 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .page.scan .w, .page.scan .m { color: transparent; -webkit-text-stroke: 0; }
 .page.scan .sh, .page.scan .bsml { visibility: hidden; }
 .page.scan .sel, .page.scan .bm { mix-blend-mode: multiply; }
+
+/* علامة الإغلاق ✕ في النوافذ والبطاقات */
+.xclose { position: sticky; top: 0; float: left; z-index: 3; width: 38px; height: 38px; margin: -4px -4px 0 0; border: 0; border-radius: 50%;
+  background: rgba(0,0,0,.07); color: #555; font-size: 20px; line-height: 38px; padding: 0; cursor: pointer; }
+#tip .xclose { position: static; float: none; margin: 0; margin-inline-start: auto; width: 32px; height: 32px; line-height: 32px; font-size: 17px; }
+#tip .tip-head { display: flex; align-items: center; }
+#startWrap { position: fixed; }
+#startX { position: absolute; float: none; top: -16px; left: -10px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25); z-index: 2; }

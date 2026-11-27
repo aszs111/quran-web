@@ -676,7 +676,8 @@ const sheet = $('#sheet');
 function openSheet(html, center = false) {
   $('#menu').hidden = true;
   sheet.className = center ? 'center' : '';
-  sheet.innerHTML = (center ? '' : '<div class="grip"></div>') + html;
+  // علامة ✕ في كل نافذة للعودة إلى المصحف
+  sheet.innerHTML = (center ? '' : '<div class="grip"></div>') + '<button class="xclose" aria-label="إغلاق">✕</button>' + html;
   sheet.hidden = false; $('#veil').hidden = false;
 }
 function closeAll() {
@@ -685,6 +686,7 @@ function closeAll() {
   stopAudio(); setSelected(null);
 }
 $('#veil').addEventListener('click', closeAll);
+sheet.addEventListener('click', e => { if (e.target.closest('.xclose')) { e.stopPropagation(); closeAll(); } }, true);
 $('#menu').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b || !selected) return;
   if (b.dataset.act === 'tafsir') showTafsir(...selected);
@@ -913,7 +915,9 @@ function showStartCards() {
   }
   el.insertAdjacentHTML('beforeend', `<button class="scard" id="tdCard"><div class="bm-head">تدبرات</div>
     <div class="td-feat" id="tdFeat">…</div><div class="td-more">صفحة <span id="tdPage"></span> · اضغط لقراءة كل تدبرات الصفحة</div></button>`);
+  el.insertAdjacentHTML('afterbegin', '<button class="xclose" id="startX" aria-label="إغلاق">✕</button>');
   document.body.appendChild(el);
+  $('#startX').onclick = closeStartCards;
   const tp = currentLayoutPage() || 1;
   $('#tdPage').textContent = tp;
   tadabbur().then(T => { const f = $('#tdFeat'); if (f) f.textContent = T.pages[tp - 1].f; }).catch(() => {});
@@ -989,7 +993,8 @@ const TIPS = [
   'تبقى الشاشة مضاءة ما دمت تقرأ في المصحف.',
   'صفحات المصحف صور من مصحف المدينة القديم (١٤٠٥هـ) بلا إطار. ومن فهرس السور يمكنك التبديل بين «صور المصحف الأصلية» و«الخط».',
   'مقاس النظر: من فهرس السور اختر «👓 مقاس النظر» ورقم نظارتك (١ إلى ٣)، فيُعرض المصحف نصًّا بخط أكبر وأثقل يريح عينك.',
-  'للخروج السريع من أي شاشة: اضغط ضغطة مطوّلة على رقم الصفحة في الأعلى ثم «خروج» (إذا كان التطبيق مثبتًا على الشاشة الرئيسية).',
+  'للخروج السريع من أي شاشة: اضغط ضغطة مطوّلة على رقم الصفحة في الأعلى ثم «خروج»، أو اسحب بإصبعين على الصفحة يمينًا أو يسارًا (إذا كان التطبيق مثبتًا على الشاشة الرئيسية).',
+  'في كل نافذة علامة ✕ في أعلاها تغلقها وتعيدك إلى المصحف.',
   'بعد وضع علامة الوقوف يظهر فوق الآية زر «خروج» صغير لبضع ثوانٍ، اضغطه لتغلق التطبيق (إذا كان مثبتًا على الشاشة الرئيسية).',
   'تدبرات: اسحب إصبعك على الصفحة أفقيًّا (يمينًا أو يسارًا) لتظهر تدبرات الصفحة التي تقرؤها، أو اختر «تدبرات» من الضغطة المطوّلة على الآية. وتظهر لك بطاقة تدبرات عند كل فتح.',
   'من قائمة المتصفح اختر «إضافة إلى الشاشة الرئيسية» ليظهر المصحف بأيقونة مثل التطبيق، ويعمل بلا إنترنت فيما قرأته.',
@@ -1001,7 +1006,8 @@ function showTips() {
     el = document.createElement('div'); el.id = 'tip';
     el.innerHTML = `<div class="tip-head">
         <svg class="bulb" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26A7 7 0 0 0 12 2zM9 20h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/></svg>
-        <b>تلميح</b><span class="badge">جديد</span><span class="count"></span></div>
+        <b>تلميح</b><span class="badge">جديد</span><span class="count"></span>
+        <button class="xclose" data-t="ok" aria-label="إغلاق">✕</button></div>
       <div class="tip-text"></div>
       <div class="tip-btns">
         <button class="tb out" data-t="never">لا تظهر التلميحات</button>
@@ -1143,6 +1149,19 @@ function showVision() {
     toast(v ? `مقاس النظر ${visionLabel(v)}: خط أكبر وأثقل` : 'أُعيد الخط إلى حجمه المعتاد');
   };
 }
+
+// السحب بإصبعين يمينًا أو يسارًا على صفحة المصحف يخرج من التطبيق
+[scroller, tscroller].forEach(el => {
+  let two = null, last = null;
+  const avg = t => ({ x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 });
+  el.addEventListener('touchstart', e => { if (e.touches.length === 2) { two = avg(e.touches); last = two; } else if (e.touches.length > 2) two = null; }, { passive: true });
+  el.addEventListener('touchmove', e => { if (two && e.touches.length === 2) last = avg(e.touches); }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (!two || e.touches.length) return;
+    const dx = last.x - two.x, dy = last.y - two.y; two = null;
+    if (sheet.hidden && Math.abs(dx) > 90 && Math.abs(dx) > 2 * Math.abs(dy)) exitApp();
+  }, { passive: true });
+});
 
 // ضغطة مطوّلة على رقم الصفحة في الأعلى: زر «خروج» تحته
 // (بأحداث اللمس مباشرة؛ لأن المتصفح في الجوال يلغي أحداث المؤشر عند الضغط المطوّل)
