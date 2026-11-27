@@ -1,0 +1,23 @@
+name: بناء صور الصفحات
+on: workflow_dispatch
+permissions: { contents: write }
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -q pillow numpy
+      - name: تنزيل المسح وبناء الصور
+        run: |
+          B="https://archive.org/download/mushaf_madinah_tercetak"
+          N="01. مصحف المدينة ملون القديم - 1405_1984"
+          q() { python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" "$1"; }
+          curl -sfL -o /tmp/z.zip "$B/$(q "${N}_jp2.zip")"
+          curl -sfL -o /tmp/pn.json "$B/$(q "${N}_page_numbers.json")" || echo '{}' > /tmp/pn.json
+          mkdir -p /tmp/jp2 && unzip -q /tmp/z.zip -d /tmp/jp2 && rm /tmp/z.zip
+          rm -rf static/scan && python3 scripts/build_scan.py /tmp/jp2 /tmp/pn.json static/scan
+          du -sh static/scan; ls static/scan | wc -l
+      - name: حفظ الصور في المستودع
+        run: |
+          git config user.name "github-actions" && git config user.email "actions@github.com"
+          git add static/scan && git commit -qm "صور صفحات مصحف المدينة القديم بلا إطار" && git push -q
