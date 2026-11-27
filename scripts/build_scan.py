@@ -35,8 +35,9 @@ def process(args):
         return int(default * n), False
     dark = a.mean(2) < 150
     pr, pc = dark.mean(1), dark.mean(0)
-    top, ok1 = edge(pr, H, True, 0.05, 0.3, 0.138); bot, ok2 = edge(pr, H, False, 0.7, 0.95, 0.858)
-    lef, ok3 = edge(pc, W, True, 0.05, 0.4, 0.230); rig, ok4 = edge(pc, W, False, 0.6, 0.97, 0.902)
+    # نوافذ ضيقة حول الموضع المعتاد كي لا تُحسب حدود عناوين السور إطارًا
+    top, ok1 = edge(pr, H, True, 0.11, 0.16, 0.138); bot, ok2 = edge(pr, H, False, 0.835, 0.885, 0.858)
+    lef, ok3 = edge(pc, W, True, 0.19, 0.27, 0.230); rig, ok4 = edge(pc, W, False, 0.86, 0.94, 0.902)
     if not (ok1 and ok2 and ok3 and ok4): print('frame fallback', page, ok1, ok2, ok3, ok4, flush=True)
     x0, y0 = lef + 10, top + 10
     c = a[y0:bot - 10, x0:rig - 10]
