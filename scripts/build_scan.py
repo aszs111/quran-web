@@ -24,8 +24,11 @@ def groups(idx):
         else: g.append([i])
     return [(x[0], x[-1]) for x in g]
 
+SLOTS = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'slot_types.json')))
+
 def process(args):
     page, src, outdir = args
+    tmask = np.array([ch == 't' for ch in SLOTS[page - 1]]) if len(SLOTS[page - 1]) == 15 else np.ones(15, bool)
     im = Image.open(src).convert('RGB'); a = np.asarray(im).astype(float); H, W, _ = a.shape
     # الإطار الداخلي: أطول الخطوط الداكنة؛ وإن لم يُعثر عليه نأخذ موضعه المعتاد نسبةً إلى الصفحة
     def edge(prof, n, first, lo, hi, default):
@@ -46,11 +49,13 @@ def process(args):
     # شبكة الأسطر: 15 خانة متساوية؛ نبحث عن البداية والخطوة اللتين يقع عندهما أكبر قدر من الحبر
     # على مراكز الخانات (أفضل من البحث سطرًا سطرًا، لأن عناوين السور زخرفة لا حبر فيها)
     best = (-1, 0, 0)
-    for pitch in np.arange(0.062 * h, 0.07 * h, 0.5):
-        for c0 in np.arange(0.5 * pitch - 0.035 * h, 0.5 * pitch + 0.035 * h, 1.0):
+    # المدى مقيد حول الموضع المعتاد داخل الإطار (الخطوة ≈ 0.0657 من الارتفاع، والسطر الأول ≈ 0.048)
+    # كي لا تنزلق الشبكة نصف سطر في الصفحات الكثيرة العناوين
+    for pitch in np.arange(0.0645 * h, 0.0670 * h, 0.25):
+        for c0 in np.arange(0.040 * h, 0.057 * h, 0.5):
             idx = (c0 + pitch * np.arange(15)).astype(int)
             if idx[-1] >= h or idx[0] < 0: continue
-            sc = prof[idx].sum()
+            sc = prof[idx][tmask].sum()   # أسطر النص فقط (العناوين زخرفة)
             if sc > best[0]: best = (sc, pitch, c0)
     _, pitch, c0 = best
     res = np.zeros(1)
