@@ -624,18 +624,25 @@ function toggleBookmark(s, a, el) {
 let exitTimer = 0;
 function showExitPop(el, below = false) {
   hideExitPop();
-  const r = el.getBoundingClientRect(), b = document.createElement('button');
+  const b = document.createElement('button');
   b.id = 'exitPop'; b.textContent = 'خروج';
-  b.style.left = Math.max(8, Math.min(innerWidth - 88, r.left + r.width / 2 - 40)) + 'px';
-  b.style.top = (below ? r.bottom + 8 : Math.max(8, r.top - 50)) + 'px';
+  exitEl = el; exitBelow = below;
   b.onclick = e => { e.stopPropagation(); hideExitPop(); exitApp(); };
-  document.body.appendChild(b);
+  document.body.appendChild(b); placeExitPop();
   exitTimer = setTimeout(hideExitPop, 5000);
 }
 function hideExitPop() { clearTimeout(exitTimer); $('#exitPop')?.remove(); }
 document.addEventListener('pointerdown', e => { if (e.target.id !== 'exitPop' && e.target.id !== 'hPage') hideExitPop(); }, true);
-scroller.addEventListener('scroll', hideExitPop, { passive: true });
-tscroller.addEventListener('scroll', hideExitPop, { passive: true });
+// أثناء التمرير (التلقائي أو باليد) يتبع الزر رقم الآية بدل أن يختفي
+let exitEl = null, exitBelow = false;
+function placeExitPop() {
+  const b = $('#exitPop'); if (!b || !exitEl || !exitEl.isConnected) return;
+  const r = exitEl.getBoundingClientRect();
+  b.style.left = Math.max(8, Math.min(innerWidth - 88, r.left + r.width / 2 - 40)) + 'px';
+  b.style.top = (exitBelow ? r.bottom + 8 : Math.max(8, r.top - 50)) + 'px';
+}
+scroller.addEventListener('scroll', placeExitPop, { passive: true });
+tscroller.addEventListener('scroll', placeExitPop, { passive: true });
 function exitApp() {
   // المتصفح يسمح بإغلاق النافذة إذا كان التطبيق مثبتًا أو فُتح في نافذة مستقلة
   if (inFull()) exitFull();
