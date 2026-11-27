@@ -27,10 +27,17 @@ def groups(idx):
 def process(args):
     page, src, outdir = args
     im = Image.open(src).convert('RGB'); a = np.asarray(im).astype(float); H, W, _ = a.shape
-    dark = a.mean(2) < 140
-    rg = groups(np.where(dark.mean(1) > 0.5)[0]); cg = groups(np.where(dark.mean(0) > 0.5)[0])
-    top = max(e for s, e in rg if s < H / 2); bot = min(s for s, e in rg if s > H / 2)
-    lef = max(e for s, e in cg if s < W / 2); rig = min(s for s, e in cg if s > W / 2)
+    # الإطار الداخلي: أطول الخطوط الداكنة؛ وإن لم يُعثر عليه نأخذ موضعه المعتاد نسبةً إلى الصفحة
+    def edge(prof, n, first, lo, hi, default):
+        for thr in (0.5, 0.35, 0.22):
+            g = [x for x in groups(np.where(prof > thr)[0]) if lo * n < x[0] < hi * n]
+            if g: return (max(e for _, e in g) if first else min(st for st, _ in g)), True
+        return int(default * n), False
+    dark = a.mean(2) < 150
+    pr, pc = dark.mean(1), dark.mean(0)
+    top, ok1 = edge(pr, H, True, 0.05, 0.3, 0.138); bot, ok2 = edge(pr, H, False, 0.7, 0.95, 0.858)
+    lef, ok3 = edge(pc, W, True, 0.05, 0.4, 0.230); rig, ok4 = edge(pc, W, False, 0.6, 0.97, 0.902)
+    if not (ok1 and ok2 and ok3 and ok4): print('frame fallback', page, ok1, ok2, ok3, ok4, flush=True)
     x0, y0 = lef + 10, top + 10
     c = a[y0:bot - 10, x0:rig - 10]
     ink = (c.mean(2) < 110) & ((c.max(2) - c.min(2)) < 60)
@@ -71,7 +78,7 @@ def main(jp2dir, pnjson, outdir):
             if num.isdigit() and e.get('leafNum') in leaf: pmap.setdefault(int(num), leaf[e['leafNum']])
     except Exception as ex:
         print('page_numbers.json:', ex)
-    print('mapped from json:', len(pmap))
+    print('mapped from json:', len(pmap), str(open(pnjson).read())[:400])
     # ما لم يُعرف رقمه نستنتجه بإزاحة الورقة (الصفحة 8 = الورقة 12)
     off = 4
     jobs = [(p, pmap.get(p) or leaf.get(p + off), outdir) for p in range(3, 605)]

@@ -15,9 +15,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
-  const isData = /\/(fonts\/p\d+\.woff2|data\/(saadi|gharib)\/)/.test(url.pathname);
+  const isData = /\/(fonts\/p\d+\.woff2|data\/(saadi|gharib)\/|scan\/\d+\.webp)/.test(url.pathname);
   if (isData) {
-    // خطوط الصفحات والتفسير: من المحفوظ أولًا
+    // خطوط الصفحات وصورها والتفسير: من المحفوظ أولًا
     e.respondWith(caches.open(DATA).then(async c => {
       const hit = await c.match(e.request);
       if (hit) return hit;

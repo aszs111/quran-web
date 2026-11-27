@@ -54,6 +54,7 @@ async function boot() {
     if (l[0] === 't') l[1].forEach(w => { const k = w[0] + ':' + w[1]; if (!D.ayahPage.has(k)) D.ayahPage.set(k, i + 1); });
   }));
   D.surahPage[1] = 1;
+  await loadScanIndex();
   layout();
   const pos = store.get('pos', 0);
   goToPos(pos);
@@ -71,6 +72,12 @@ async function boot() {
 }
 
 // ======================= المقاسات =======================
+// صور صفحات مصحف المدينة القديم (1405هـ) بلا إطار؛ الصفحتان 1 و2 تبقيان بالخط
+let SCAN = null;
+const useScan = p => SCAN && store.get('scan', true) && SCAN.ratio[p];
+async function loadScanIndex() {
+  try { SCAN = await (await fetch('scan/index.json')).json(); } catch { SCAN = null; }
+}
 function layout() {
   const vw = Math.min(document.documentElement.clientWidth, 760);
   const hpad = 10, avail = vw - hpad * 2;
@@ -82,7 +89,8 @@ function layout() {
     let f = fit(p);
     if (p <= 2) f = Math.min(f, fit(3)); // صفحتا الفاتحة وأول البقرة بحجم بقية المصحف
     fonts.push(f);
-    const h = 6 + D.pages[p - 1].length * lh + 8;
+    const r = useScan(p);
+    const h = r ? 6 + avail * r + 8 : 6 + D.pages[p - 1].length * lh + 8;
     tops.push(y); heights.push(h); y += h;
   }
   L = { vw, hpad, avail, lh, fonts, tops, heights, total: y };
@@ -162,6 +170,16 @@ function renderPage(p) {
   el.style.cssText = `top:${L.tops[p - 1]}px;height:${L.heights[p - 1]}px;font-family:p${p},bsml;font-size:${fpx}px;` +
     `--st:${((D.stroke[p - 1] + BASE_STROKE) * fpx).toFixed(3)}px;visibility:hidden`;
   el.innerHTML = pageHTML(p);
+  const r = useScan(p);
+  if (r) {
+    // الصورة تحت طبقة الكلمات الشفافة؛ كل سطر خانة متساوية من خمس عشرة
+    el.classList.add('scan');
+    el.style.setProperty('--lh', (L.avail * r / 15) + 'px');
+    const img = new Image(); img.className = 'scanimg'; img.decoding = 'async'; img.alt = '';
+    img.style.cssText = `top:6px;left:${L.hpad}px;width:${L.avail}px;height:${L.avail * r}px`;
+    img.src = `scan/${pad3(p)}.webp`;
+    el.prepend(img);
+  }
   pagesEl.appendChild(el);
   rendered.set(p, el);
   loadPageFont(p).then(() => { el.style.visibility = ''; });
@@ -969,6 +987,7 @@ const TIPS = [
   'عند كل فتح تظهر بطاقة علامة الوقوف، و«انتقل إليها» يأخذك إليها. وتحتها بطاقة الورد اليومي، اضغطها لتفتح متابعة الورد. والنقر خارج البطاقتين يخفيهما.',
   'في رسم الورد: الأحمر دون ثلثي هدفك اليومي، والبرتقالي ثلثاه، والأخضر الهدف كاملًا. وإذا أتممت ورد اليوم ظهر لك تاج يومض.',
   'تبقى الشاشة مضاءة ما دمت تقرأ في المصحف.',
+  'صفحات المصحف صور من مصحف المدينة القديم (١٤٠٥هـ) بلا إطار. ومن فهرس السور يمكنك التبديل بين «صور المصحف الأصلية» و«الخط».',
   'مقاس النظر: من فهرس السور اختر «👓 مقاس النظر» ورقم نظارتك (١ إلى ٣)، فيُعرض المصحف نصًّا بخط أكبر وأثقل يريح عينك.',
   'للخروج السريع من أي شاشة: اضغط ضغطة مطوّلة على رقم الصفحة في الأعلى ثم «خروج» (إذا كان التطبيق مثبتًا على الشاشة الرئيسية).',
   'بعد وضع علامة الوقوف يظهر فوق الآية زر «خروج» صغير لبضع ثوانٍ، اضغطه لتغلق التطبيق (إذا كان مثبتًا على الشاشة الرئيسية).',
@@ -1146,6 +1165,7 @@ $('#hSurah').onclick = () => {
   openSheet(`<div class="title">فهرس السور</div>
     ${bookmark ? `<button class="bmrow" id="goBm">◆ علامة الوقوف: ${ayahTitle(...bookmark)}</button>` : ''}
     <button class="bmrow" id="showTipsBtn" style="background:#FBF6EC;color:#7A2430">💡 عرض التلميحات</button>
+    ${SCAN ? `<button class="bmrow" id="scanBtn" style="background:#F4EFE3;color:#6B4E16">🖼 صفحات المصحف: ${store.get('scan', true) ? 'صور المصحف الأصلية' : 'الخط'}</button>` : ''}
     <button class="bmrow" id="visionBtn" style="background:#EEF2F8;color:#2F4F7A">👓 مقاس النظر: ${visionLabel(store.get('vision', 0))}</button>
     ${canFull() && !isStandalone() ? `<button class="bmrow" id="fullBtn" style="background:#EAF3EF;color:var(--accent)">⛶ ${inFull() ? 'الخروج من ملء الشاشة' : 'ملء الشاشة دون شريط العنوان'}</button>` : ''}
     <div class="list">${D.surahs.map((n, i) => `<button class="item" data-s="${i + 1}" data-p="${D.surahPage[i + 1]}"><span class="n">${AR(i + 1)}</span>سورة ${n}<span class="p">ص ${AR(D.surahPage[i + 1])}</span></button>`).join('')}</div>`);
@@ -1154,6 +1174,11 @@ $('#hSurah').onclick = () => {
   };
   $('#showTipsBtn').onclick = () => { store.set('hideTips', false); closeAll(); showTips(); };
   $('#visionBtn').onclick = showVision;
+  if ($('#scanBtn')) $('#scanBtn').onclick = () => {
+    const on = !store.get('scan', true); store.set('scan', on); closeAll();
+    const pos = currentPos(); layout(); goToPos(pos); onScroll();
+    toast(on ? 'تُعرض صور المصحف الأصلية' : 'تُعرض الصفحات بالخط');
+  };
   if (bookmark) $('#goBm').onclick = () => { closeAll(); goToAyah(...bookmark, true); };
   sheet.querySelector('.list').onclick = e => { const b = e.target.closest('.item'); if (b) { closeAll(); goToAyah(+b.dataset.s, 1); } };
 };
