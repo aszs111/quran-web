@@ -994,7 +994,8 @@ function simFollow(el) {
   if (!el) { goToAyah(A.s, A.a, true); return; }
   const sc = mode === 'text' ? tscroller : scroller, r = el.getBoundingClientRect();
   const top = $('header')?.getBoundingClientRect().bottom || 60, bottom = innerHeight - 150;
-  if (r.top < top + 20 || r.bottom > bottom) sc.scrollBy({ top: r.top - (top + (bottom - top) * 0.35), behavior: 'smooth' });
+  // في وضع النص نقفز مباشرة (الأقسام غير المرسومة تغيّر أطوالها فيضطرب التمرير الناعم)
+  if (r.top < top + 20 || r.bottom > bottom) sc.scrollBy({ top: r.top - (top + (bottom - top) * 0.35), behavior: mode === 'text' ? 'auto' : 'smooth' });
 }
 
 // ---------- بطاقتا الفتح: علامة الوقوف، ومتابعة الورد ----------
