@@ -256,3 +256,12 @@ body.simming #scroller, body.simming #tscroller { padding-bottom: 80px; }
 body.simming #scroller, body.simming #tscroller { padding-bottom: 120px; }
 #simBar[hidden] { display: none; }
 #simBar button { direction: ltr; unicode-bidi: isolate; }   /* لا تنقلب الأسهم في الاتجاه العربي */
+
+/* ترتيب شريط المطابقة: رجوع و✕ في الأعلى، ثم الصوت، ثم الأزرار في الأسفل */
+#simBar { flex-direction: column; flex-wrap: nowrap; gap: 4px; }
+#simBar .simTop { display: flex; justify-content: space-between; width: 100%; max-width: 480px; }
+#simBar .simBtns { display: flex; gap: 10px; justify-content: center; align-items: center; }
+#simBar .vol { order: 0; }
+#simBar button.sback { width: auto; height: 36px; border-radius: 18px; padding: 0 14px; font-size: 19px; background: #E6EFEA; direction: rtl; }
+#simBar button.sx { margin: 0; }
+body.simming #scroller, body.simming #tscroller { padding-bottom: 170px; }

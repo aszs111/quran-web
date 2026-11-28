@@ -928,11 +928,12 @@ async function startSim(s, a) {
   if (!bar) {
     bar = document.createElement('div'); bar.id = 'simBar';
     // من اليمين: كلمة سابقة، آية سابقة، إيقاف مؤقت، آية تالية، كلمة تالية
-    bar.innerHTML = `<button data-s="pw" aria-label="الكلمة السابقة">›</button><button data-s="pa" aria-label="الآية السابقة">»</button>
+    // أعلى: «رجوع» إلى نافذة التلاوة يمينًا و✕ يسارًا؛ ثم مستوى الصوت؛ ثم أزرار التنقل في الأسفل
+    bar.innerHTML = `<div class="simTop"><button data-s="back" class="sback">→ رجوع</button><button data-s="x" class="sx" aria-label="إنهاء المطابقة">✕</button></div>
+      <label class="vol">🔈<input type="range" id="simVol" min="0" max="1" step="0.05" value="${store.get('volume', 1)}">🔊</label>
+      <div class="simBtns"><button data-s="pw" aria-label="الكلمة السابقة">›</button><button data-s="pa" aria-label="الآية السابقة">»</button>
       <button data-s="pp" class="main" aria-label="إيقاف"><svg viewBox="0 0 24 24"><path id="simIcon" d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
-      <button data-s="na" aria-label="الآية التالية">«</button><button data-s="nw" aria-label="الكلمة التالية">‹</button>
-      <button data-s="x" class="sx" aria-label="إنهاء المطابقة">✕</button>
-      <label class="vol">🔈<input type="range" id="simVol" min="0" max="1" step="0.05" value="${store.get('volume', 1)}">🔊</label>`;
+      <button data-s="na" aria-label="الآية التالية">«</button><button data-s="nw" aria-label="الكلمة التالية">‹</button></div>`;
     document.body.appendChild(bar);
     bar.onclick = e => { const b = e.target.closest('button'); if (b) simCmd(b.dataset.s); };
     $('#simVol').oninput = e => { player.volume = +e.target.value; store.set('volume', player.volume); };
@@ -950,6 +951,7 @@ function simAyah(s, a, at = null) {
 function simCmd(c) {
   const segs = SIM.seg, n = segs.length / 4, k = SIM.k;
   if (c === 'x') return endSim();
+  if (c === 'back') { const [s, a] = [A.s, A.a]; endSim(); return showAudio(s, a); }   // لتبديل القارئ أو السرعة
   if (c === 'pp') { if (!A.loaded) simAyah(A.s, A.a); else if (player.paused) player.play(); else player.pause(); return paintSim(); }
   if (c === 'na' || c === 'pa') { const t = c === 'na' ? nextOf(A.s, A.a) : prevOf(A.s, A.a); if (t) simAyah(...t); return; }
   if (c === 'nw') {
@@ -993,7 +995,7 @@ function simTick() {
 function simFollow(el) {
   if (!el) { goToAyah(A.s, A.a, true); return; }
   const sc = mode === 'text' ? tscroller : scroller, r = el.getBoundingClientRect();
-  const top = $('header')?.getBoundingClientRect().bottom || 60, bottom = innerHeight - 150;
+  const top = $('header')?.getBoundingClientRect().bottom || 60, bottom = innerHeight - 190;
   // في وضع النص نقفز مباشرة (الأقسام غير المرسومة تغيّر أطوالها فيضطرب التمرير الناعم)
   if (r.top < top + 20 || r.bottom > bottom) sc.scrollBy({ top: r.top - (top + (bottom - top) * 0.35), behavior: mode === 'text' ? 'auto' : 'smooth' });
 }
