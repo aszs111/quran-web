@@ -265,7 +265,9 @@ async function buildText() {
       const k = t.lastIndexOf('\u00a0');
       const body = k > 0 ? t.slice(0, k) : t, num = k > 0 ? t.slice(k + 1) : '';
       const cls = isBm(s, a) ? ' bm' : '';
-      h += `<span class="ta${cls}" data-a="${s}:${a}">${esc(body)}\u00a0<span class="tm" data-a="${s}:${a}">${esc(num)}</span></span> `;
+      let wi = 0;   // كل كلمة في عنصر (لتظليلها في المحاكاة)؛ علامات الوقف لا تُعدّ كلمات
+      const words = body.split(' ').map(t => /[\u0621-\u064A\u0671]/.test(t) ? `<span class="tw" data-a="${s}:${a}" data-w="${++wi}">${esc(t)}</span>` : esc(t)).join(' ');
+      h += `<span class="ta${cls}" data-a="${s}:${a}">${words}\u00a0<span class="tm" data-a="${s}:${a}">${esc(num)}</span></span> `;
     }
     h += `</p><div class="pmark"><span>${p}</span></div></section>`;
   });
@@ -540,7 +542,7 @@ function tick(t) {
   auto.last = t;
   requestAnimationFrame(tick);
 }
-function setRunning(r) { auto.running = r; auto.last = 0; auto.acc = 0; paintAuto(); if (r) requestAnimationFrame(tick); }
+function setRunning(r) { if (r && SIM.on) return; auto.running = r; auto.last = 0; auto.acc = 0; paintAuto(); if (r) requestAnimationFrame(tick); }
 autoEl.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const act = b.dataset.act;
@@ -833,6 +835,7 @@ async function showCopy(s, a) {
 
 // ---------- التلاوة ----------
 const player = $('#player');
+player.volume = store.get('volume', 1);
 const A = { s: 0, a: 0, start: null, loaded: false, rec: store.get('reciter', 0), rate: store.get('rate', 1), cont: store.get('continuous', false), rep: store.get('repeat', 1), cnt: 1 };
 const REPEATS = [1, 2, 3, 5, 7, 10, 0]; // 0 = بلا حد
 function audioUrl(s, a) { return `https://everyayah.com/data/${RECITERS[A.rec][1]}/${pad3(s)}${pad3(a)}.mp3`; }
@@ -849,6 +852,7 @@ player.addEventListener('play', paintAudio);
 player.addEventListener('pause', paintAudio);
 player.addEventListener('ended', () => {
   if (A.rep === 0 || A.cnt < A.rep) { A.cnt++; player.currentTime = 0; player.play().catch(() => {}); return; }
+  if (SIM.on) { const t = nextOf(A.s, A.a); if (t) simAyah(...t); else { A.loaded = false; paintSim(); } return; }
   if (A.cont && A.a < D.counts[A.s - 1]) { A.a++; playAyah(); } else { A.loaded = false; paintAudio(); }
 });
 player.addEventListener('error', () => {
@@ -870,8 +874,11 @@ function showAudio(s, a) {
     <div class="ctrls">
       <button class="cbtn" id="aStop" aria-label="إيقاف"><svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg></button>
       <button class="cbtn main" id="aPlay" aria-label="تشغيل"><svg viewBox="0 0 24 24"><path id="aIcon" d="M8 5l11 7-11 7z"/></svg></button>
+      <button class="simbtn" id="aSim">محاكاة</button>
     </div>
+    <div class="small" id="aSimNote"></div>
     <div class="err" id="aErr"></div>
+    <label class="vol" style="margin-top:8px">مستوى الصوت 🔈<input type="range" id="aVol" min="0" max="1" step="0.05" value="${store.get('volume', 1)}">🔊</label>
     <div style="font-size:21px;margin-top:8px">سرعة القراءة: <span id="aRate"></span></div>
     <input type="range" id="aRange" min="0.5" max="2" step="0.25" value="${A.rate}">
     <label class="chk"><input type="checkbox" id="aCont" ${A.cont ? 'checked' : ''}>متابعة الآيات التالية تلقائيًا</label>
@@ -893,6 +900,101 @@ function showAudio(s, a) {
     sheet.querySelectorAll('.rep').forEach(x => x.classList.toggle('on', x === b));
   };
   $('#aCont').onchange = e => { A.cont = e.target.checked; store.set('continuous', A.cont); };
+  $('#aVol').oninput = e => { player.volume = +e.target.value; store.set('volume', player.volume); };
+  const simNote = () => {
+    const ok = TIMED.has(RECITERS[A.rec][1]);
+    $('#aSim').disabled = !ok;
+    $('#aSimNote').textContent = ok ? '' : 'المحاكاة متاحة لهذه الأصوات: ' + RECITERS.filter(r => TIMED.has(r[1])).map(r => r[0]).join('، ');
+  };
+  simNote();
+  sheet.querySelector('.reciters').addEventListener('click', simNote);
+  $('#aSim').onclick = () => startSim(A.s, A.a);
+}
+
+// ---------- المحاكاة: تظليل الكلمة التي يتلوها القارئ ----------
+// توقيت الكلمات من مشروع quran-align (CC BY 4.0) لبعض أصوات everyayah
+const TIMED = new Set(['Alafasy_128kbps', 'Abdurrahmaan_As-Sudais_192kbps', 'Saood_ash-Shuraym_128kbps', 'Husary_64kbps',
+  'Minshawy_Murattal_128kbps', 'Abdul_Basit_Murattal_64kbps', 'Abu_Bakr_Ash-Shaatree_128kbps', 'Hani_Rifai_192kbps', 'Mohammad_al_Tablaway_128kbps']);
+const SIM = { on: false, T: null, seg: [], k: -1, el: [], seekTo: null };
+const nextOf = (s, a) => a < D.counts[s - 1] ? [s, a + 1] : s < 114 ? [s + 1, 1] : null;
+const prevOf = (s, a) => a > 1 ? [s, a - 1] : s > 1 ? [s - 1, D.counts[s - 2]] : null;
+async function startSim(s, a) {
+  const f = RECITERS[A.rec][1]; if (!TIMED.has(f)) return;
+  SIM.T = null; SIM.on = true;
+  // نغلق النافذة دون إيقاف الصوت، ونوقف التمرير التلقائي
+  $('#menu').hidden = true; sheet.hidden = true; $('#veil').hidden = true; setSelected(null);
+  if (auto.running) setRunning(false);
+  let bar = $('#simBar');
+  if (!bar) {
+    bar = document.createElement('div'); bar.id = 'simBar';
+    // من اليمين: كلمة سابقة، آية سابقة، إيقاف مؤقت، آية تالية، كلمة تالية
+    bar.innerHTML = `<button data-s="pw" aria-label="الكلمة السابقة">›</button><button data-s="pa" aria-label="الآية السابقة">»</button>
+      <button data-s="pp" class="main" aria-label="إيقاف"><svg viewBox="0 0 24 24"><path id="simIcon" d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
+      <button data-s="na" aria-label="الآية التالية">«</button><button data-s="nw" aria-label="الكلمة التالية">‹</button>
+      <button data-s="x" class="sx" aria-label="إنهاء المحاكاة">✕</button>
+      <label class="vol">🔈<input type="range" id="simVol" min="0" max="1" step="0.05" value="${store.get('volume', 1)}">🔊</label>`;
+    document.body.appendChild(bar);
+    bar.onclick = e => { const b = e.target.closest('button'); if (b) simCmd(b.dataset.s); };
+    $('#simVol').oninput = e => { player.volume = +e.target.value; store.set('volume', player.volume); };
+  }
+  bar.hidden = false; document.body.classList.add('simming');
+  goToAyah(s, a, true);
+  try { SIM.T = await json(`data/timing/${f}.json`); } catch { toast('تعذّر تحميل توقيت الكلمات'); }
+  simAyah(s, a);
+  requestAnimationFrame(simTick);
+}
+function simAyah(s, a, at = null) {
+  A.s = s; A.a = a; SIM.seg = (SIM.T && SIM.T[s + ':' + a]) || []; SIM.k = -1; SIM.seekTo = at;
+  playAyah(); setSelected(null);
+}
+function simCmd(c) {
+  const segs = SIM.seg, n = segs.length / 4, k = SIM.k;
+  if (c === 'x') return endSim();
+  if (c === 'pp') { if (!A.loaded) simAyah(A.s, A.a); else if (player.paused) player.play(); else player.pause(); return paintSim(); }
+  if (c === 'na' || c === 'pa') { const t = c === 'na' ? nextOf(A.s, A.a) : prevOf(A.s, A.a); if (t) simAyah(...t); return; }
+  if (c === 'nw') {
+    if (k + 1 < n) { player.currentTime = segs[(k + 1) * 4 + 2] / 1000; if (player.paused) player.play(); }
+    else { const t = nextOf(A.s, A.a); if (t) simAyah(...t); }
+  }
+  if (c === 'pw') {
+    if (k > 0) { player.currentTime = segs[(k - 1) * 4 + 2] / 1000; if (player.paused) player.play(); }
+    else { const t = prevOf(A.s, A.a); if (t) simAyah(t[0], t[1], 'last'); }
+  }
+}
+player.addEventListener('loadedmetadata', () => {
+  if (!SIM.on || SIM.seekTo == null) return;
+  const n = SIM.seg.length / 4;
+  if (SIM.seekTo === 'last' && n) player.currentTime = SIM.seg[(n - 1) * 4 + 2] / 1000;
+  SIM.seekTo = null;
+});
+function endSim() {
+  SIM.on = false; stopAudio(); simMark([]);
+  const bar = $('#simBar'); if (bar) bar.hidden = true;
+  document.body.classList.remove('simming');
+}
+function paintSim() { const i = $('#simIcon'); if (i) i.setAttribute('d', !player.paused ? 'M6 5h4v14H6zM14 5h4v14h-4z' : 'M8 5l11 7-11 7z'); }
+player.addEventListener('play', paintSim); player.addEventListener('pause', paintSim);
+function simMark(els) { SIM.el.forEach(e => e.classList.remove('cw')); SIM.el = els; els.forEach(e => e.classList.add('cw')); }
+function simTick() {
+  if (!SIM.on) return;
+  const t = player.currentTime * 1000, segs = SIM.seg;
+  let k = -1;
+  for (let i = 0; i < segs.length; i += 4) if (segs[i + 2] <= t + 30) k = i / 4; else break;
+  if (k !== SIM.k && k >= 0) {
+    SIM.k = k;
+    const w0 = segs[k * 4], w1 = segs[k * 4 + 1], key = A.s + ':' + A.a, els = [];
+    for (let w = w0 + 1; w <= w1; w++) document.querySelectorAll(`.w[data-a="${key}"][data-w="${w}"], .tw[data-a="${key}"][data-w="${w}"]`).forEach(e => els.push(e));
+    simMark(els);
+    simFollow(els[0]);
+  }
+  requestAnimationFrame(simTick);
+}
+// إبقاء الكلمة المظللة ظاهرة فوق شريط الأزرار
+function simFollow(el) {
+  if (!el) { goToAyah(A.s, A.a, true); return; }
+  const sc = mode === 'text' ? tscroller : scroller, r = el.getBoundingClientRect();
+  const top = $('header')?.getBoundingClientRect().bottom || 60, bottom = innerHeight - 150;
+  if (r.top < top + 20 || r.bottom > bottom) sc.scrollBy({ top: r.top - (top + (bottom - top) * 0.35), behavior: 'smooth' });
 }
 
 // ---------- بطاقتا الفتح: علامة الوقوف، ومتابعة الورد ----------
@@ -991,6 +1093,7 @@ const TIPS = [
   'عند كل فتح تظهر بطاقة علامة الوقوف، و«انتقل إليها» يأخذك إليها. وتحتها بطاقة الورد اليومي، اضغطها لتفتح متابعة الورد. والنقر خارج البطاقتين يخفيهما.',
   'في رسم الورد: الأحمر دون ثلثي هدفك اليومي، والبرتقالي ثلثاه، والأخضر الهدف كاملًا. وإذا أتممت ورد اليوم ظهر لك تاج يومض.',
   'تبقى الشاشة مضاءة ما دمت تقرأ في المصحف.',
+  'المحاكاة: في التلاوة اختر القارئ والسرعة ثم اضغط «محاكاة»، فتُظلَّل كل كلمة وقت تلاوتها. وفي أسفل الصفحة أزرار: كلمة سابقة وآية سابقة وإيقاف وآية تالية وكلمة تالية، و✕ لإنهائها.',
   'صفحات المصحف صور من مصحف المدينة القديم (١٤٠٥هـ) بلا إطار. ومن فهرس السور يمكنك التبديل بين «صور المصحف الأصلية» و«الخط».',
   'مقاس النظر: من فهرس السور اختر «👓 مقاس النظر» ورقم نظارتك (١ إلى ٣)، فيُعرض المصحف نصًّا بخط أكبر وأثقل يريح عينك.',
   'للخروج السريع من أي شاشة: اضغط ضغطة مطوّلة على رقم الصفحة في الأعلى ثم «خروج»، أو اسحب بإصبعين على الصفحة يمينًا أو يسارًا (إذا كان التطبيق مثبتًا على الشاشة الرئيسية).',
