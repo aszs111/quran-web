@@ -265,7 +265,7 @@ async function buildText() {
       const k = t.lastIndexOf('\u00a0');
       const body = k > 0 ? t.slice(0, k) : t, num = k > 0 ? t.slice(k + 1) : '';
       const cls = isBm(s, a) ? ' bm' : '';
-      let wi = 0;   // كل كلمة في عنصر (لتظليلها في المحاكاة)؛ علامات الوقف لا تُعدّ كلمات
+      let wi = 0;   // كل كلمة في عنصر (لتظليلها في المطابقة)؛ علامات الوقف لا تُعدّ كلمات
       const words = body.split(' ').map(t => /[\u0621-\u064A\u0671]/.test(t) ? `<span class="tw" data-a="${s}:${a}" data-w="${++wi}">${esc(t)}</span>` : esc(t)).join(' ');
       h += `<span class="ta${cls}" data-a="${s}:${a}">${words}\u00a0<span class="tm" data-a="${s}:${a}">${esc(num)}</span></span> `;
     }
@@ -874,7 +874,7 @@ function showAudio(s, a) {
     <div class="ctrls">
       <button class="cbtn" id="aStop" aria-label="إيقاف"><svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg></button>
       <button class="cbtn main" id="aPlay" aria-label="تشغيل"><svg viewBox="0 0 24 24"><path id="aIcon" d="M8 5l11 7-11 7z"/></svg></button>
-      <button class="simbtn" id="aSim">محاكاة</button>
+      <button class="simbtn" id="aSim">مطابقة</button>
     </div>
     <div class="small" id="aSimNote"></div>
     <div class="err" id="aErr"></div>
@@ -904,14 +904,14 @@ function showAudio(s, a) {
   const simNote = () => {
     const ok = TIMED.has(RECITERS[A.rec][1]);
     $('#aSim').disabled = !ok;
-    $('#aSimNote').textContent = ok ? '' : 'المحاكاة متاحة لهذه الأصوات: ' + RECITERS.filter(r => TIMED.has(r[1])).map(r => r[0]).join('، ');
+    $('#aSimNote').textContent = ok ? '' : 'المطابقة متاحة لهذه الأصوات: ' + RECITERS.filter(r => TIMED.has(r[1])).map(r => r[0]).join('، ');
   };
   simNote();
   sheet.querySelector('.reciters').addEventListener('click', simNote);
   $('#aSim').onclick = () => startSim(A.s, A.a);
 }
 
-// ---------- المحاكاة: تظليل الكلمة التي يتلوها القارئ ----------
+// ---------- المطابقة: تظليل الكلمة التي يتلوها القارئ ----------
 // توقيت الكلمات من مشروع quran-align (CC BY 4.0) لبعض أصوات everyayah
 const TIMED = new Set(['Alafasy_128kbps', 'Abdurrahmaan_As-Sudais_192kbps', 'Saood_ash-Shuraym_128kbps', 'Husary_64kbps',
   'Minshawy_Murattal_128kbps', 'Abdul_Basit_Murattal_64kbps', 'Abu_Bakr_Ash-Shaatree_128kbps', 'Hani_Rifai_192kbps', 'Mohammad_al_Tablaway_128kbps']);
@@ -931,7 +931,7 @@ async function startSim(s, a) {
     bar.innerHTML = `<button data-s="pw" aria-label="الكلمة السابقة">›</button><button data-s="pa" aria-label="الآية السابقة">»</button>
       <button data-s="pp" class="main" aria-label="إيقاف"><svg viewBox="0 0 24 24"><path id="simIcon" d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
       <button data-s="na" aria-label="الآية التالية">«</button><button data-s="nw" aria-label="الكلمة التالية">‹</button>
-      <button data-s="x" class="sx" aria-label="إنهاء المحاكاة">✕</button>
+      <button data-s="x" class="sx" aria-label="إنهاء المطابقة">✕</button>
       <label class="vol">🔈<input type="range" id="simVol" min="0" max="1" step="0.05" value="${store.get('volume', 1)}">🔊</label>`;
     document.body.appendChild(bar);
     bar.onclick = e => { const b = e.target.closest('button'); if (b) simCmd(b.dataset.s); };
@@ -1094,7 +1094,7 @@ const TIPS = [
   'عند كل فتح تظهر بطاقة علامة الوقوف، و«انتقل إليها» يأخذك إليها. وتحتها بطاقة الورد اليومي، اضغطها لتفتح متابعة الورد. والنقر خارج البطاقتين يخفيهما.',
   'في رسم الورد: الأحمر دون ثلثي هدفك اليومي، والبرتقالي ثلثاه، والأخضر الهدف كاملًا. وإذا أتممت ورد اليوم ظهر لك تاج يومض.',
   'تبقى الشاشة مضاءة ما دمت تقرأ في المصحف.',
-  'المحاكاة: في التلاوة اختر القارئ والسرعة ثم اضغط «محاكاة»، فتُظلَّل كل كلمة وقت تلاوتها. وفي أسفل الصفحة أزرار: كلمة سابقة وآية سابقة وإيقاف وآية تالية وكلمة تالية، و✕ لإنهائها.',
+  'المطابقة: في التلاوة اختر القارئ والسرعة ثم اضغط «مطابقة»، فتُظلَّل كل كلمة وقت تلاوتها. وفي أسفل الصفحة أزرار: كلمة سابقة وآية سابقة وإيقاف وآية تالية وكلمة تالية، و✕ لإنهائها.',
   'صفحات المصحف صور من مصحف المدينة القديم (١٤٠٥هـ) بلا إطار. ومن فهرس السور يمكنك التبديل بين «صور المصحف الأصلية» و«الخط».',
   'مقاس النظر: من فهرس السور اختر «👓 مقاس النظر» ورقم نظارتك (١ إلى ٣)، فيُعرض المصحف نصًّا بخط أكبر وأثقل يريح عينك.',
   'للخروج السريع من أي شاشة: اضغط ضغطة مطوّلة على رقم الصفحة في الأعلى ثم «خروج»، أو اسحب بإصبعين على الصفحة يمينًا أو يسارًا (إذا كان التطبيق مثبتًا على الشاشة الرئيسية).',
