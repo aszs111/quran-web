@@ -985,7 +985,7 @@ function simTick() {
   if (k !== SIM.k && k >= 0) {
     SIM.k = k;
     const w0 = segs[k * 4], w1 = segs[k * 4 + 1], key = A.s + ':' + A.a, els = [];
-    for (let w = w0 + 1; w <= w1; w++) document.querySelectorAll(`.w[data-a="${key}"][data-w="${w}"], .tw[data-a="${key}"][data-w="${w}"]`).forEach(e => els.push(e));
+    for (let w = w0 + 1; w <= w1; w++) document.querySelectorAll(mode === 'text' ? `.tw[data-a="${key}"][data-w="${w}"]` : `.w[data-a="${key}"][data-w="${w}"]`).forEach(e => els.push(e));
     simMark(els);
     simFollow(els[0]);
   }
@@ -993,7 +993,8 @@ function simTick() {
 }
 // إبقاء الكلمة المظللة ظاهرة فوق شريط الأزرار
 function simFollow(el) {
-  if (!el) { goToAyah(A.s, A.a, true); return; }
+  if (!el) { if (mode !== 'text') goToAyah(A.s, A.a, true); else document.querySelector(`.tw[data-a="${A.s}:${A.a}"]`)?.scrollIntoView({ block: 'center' }); return; }
+  const r0 = el.getBoundingClientRect(); if (!r0.height) return;
   const sc = mode === 'text' ? tscroller : scroller, r = el.getBoundingClientRect();
   const top = $('header')?.getBoundingClientRect().bottom || 60, bottom = innerHeight - 190;
   // في وضع النص نقفز مباشرة (الأقسام غير المرسومة تغيّر أطوالها فيضطرب التمرير الناعم)
