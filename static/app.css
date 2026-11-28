@@ -254,3 +254,4 @@ body.simming #scroller, body.simming #tscroller { padding-bottom: 80px; }
 .vol input { flex: 1; accent-color: var(--accent); }
 #simBar .vol { order: 9; max-width: 420px; font-size: 18px; }
 body.simming #scroller, body.simming #tscroller { padding-bottom: 120px; }
+#simBar[hidden] { display: none; }
